@@ -129,6 +129,17 @@ Runs a callback whenever the value changes:
 _A sibling of useDisplay_, it provides controlled access to properties of a DOM element, allowing you to specify one or a list of properties.
 
 #### useBinds
+Binds properties between elements and an object, updating them in response to changes.
+use the `bind` HTML attribute on the elements you want to bind and then put the following values separated by '`:`'. Only the first is required:
+- The property of the element that you need to bind (ex. "innerText")
+  > Notice that even though "class" is an HTML attribute, in JS to modify it directly you need to use "className". This is just an examples, there are other exceptions too (like "style") 
+- _(optional)_ The corresponding name (by default is the same of the propery) of the bind object on the JS side.
+  > This can be useful if you want to bind under the same name different elements properties
+- _(optional)_ An event name that you want to listen to and cause the value to be recomputed
+  > If you are binding the "value" property on an "input" tag you might wanna listen to the "input" event in order to update the value on user input
+
+You can binds multiple properties of the same element by separating them with a (or more) spaces like this: `bind="value:color:input innerText className:theme"`.
+A more complete example below:
 ```html
 <html>
     <form>
