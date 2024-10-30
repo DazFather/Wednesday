@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Wensday</title>
+        <meta charset="utf-8"/>
+        <!-- Stylesheets -->
+        <link rel="stylesheet" href="{{ .StyleDir }}/wed-style.css">
+        {{ range $url := .Styles }}<link rel="stylesheet" href="{{ $url }}">{{ end }}
+        <!-- Scripts -->
+        <script type="text/javascript" src="{{ .ScriptDir }}/wed-utils.js"></script>
+        {{ range $url := .Scripts }}<script defer type="text/javascript" src="{{ $url }}"></script>{{ end }}
+    </head>
+    <body>
+        {{ template "app" args "Wed" "nesday" }}
+    </body>
+</html>
