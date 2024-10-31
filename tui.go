@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/DazFather/brush"
 )
@@ -13,6 +16,7 @@ var (
 	danger  = NewPrinter(padding("x"), brush.Red)
 	warn    = NewPrinter(padding("!"), brush.Yellow)
 	success = NewPrinter(padding("v"), brush.Green)
+	running = NewPrinter(padding(">>"), brush.Magenta)
 )
 
 func NewPrinter(prefix string, baseTone brush.ANSIColor) func(...any) {
@@ -58,7 +62,8 @@ func ShowUsage() {
 			args  []string
 			flags []string
 		}{
-			{name: "help", desc: "show this helpful text on screen"},
+			{name: "help", desc: "Show this helpful text on screen"},
+			{name: "run", flags: f[:1], desc: "Run pipeline defined on the \"Run\" settings property"},
 			{name: "init", flags: f[:1], desc: "Initialize a new project on the current working directories by creating default files and directories"},
 			{name: "build", flags: f[:1], args: a[:], desc: "Compose project components recursively and outputs the files on the directories specified on the project settings"},
 			{name: "serve", flags: f[:], args: a[:], desc: "Build the project and launch a local static server on the built directory"},
@@ -75,4 +80,43 @@ func ShowUsage() {
 			fmt.Println(gray("  -", cyan(name[0:1]), " | -", cyan(name), " (optional) ", flagUsage[name]))
 		}
 	}
+}
+
+type indentWriter struct {
+	indent []byte
+	end    []byte
+	*strings.Builder
+}
+
+func NewIndentWriter(indent, end string, buf *strings.Builder) *indentWriter {
+	if buf == nil {
+		buf = new(strings.Builder)
+	}
+
+	return &indentWriter{
+		indent:  []byte(indent),
+		end:     []byte(end),
+		Builder: buf,
+	}
+}
+
+func (w *indentWriter) Write(data []byte) (n int, err error) {
+	n = len(data)
+	if _, err = w.Builder.Write(data); err != nil {
+		return
+	}
+
+	if n > 0 && data[n-1] == '\n' {
+		data = data[:n-1]
+	}
+
+	b := new(bytes.Buffer)
+	if _, err = b.Write(w.indent); err == nil {
+		if _, err = b.Write(endln.ReplaceAll(data, append([]byte("\n"), w.indent...))); err == nil {
+			if _, err = b.Write(w.end); err == nil {
+				_, err = os.Stdout.Write(b.Bytes())
+			}
+		}
+	}
+	return
 }

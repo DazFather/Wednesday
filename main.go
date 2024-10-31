@@ -5,7 +5,9 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -16,14 +18,17 @@ var (
 )
 
 func main() {
-	if len(os.Args) <= 1 {
-		danger("Empty arguments", usageSnip)
+	wed(os.Args[1:]...)
+}
+
+func wed(args ...string) (err error) {
+	if len(args) == 0 {
+		err = errors.New("Invalid given arguments")
+		danger(err, "None given", usageSnip)
 		return
 	}
 
-	var err error
-
-	switch command, arguments, flags = LoadFlags(os.Args[1:]); command {
+	switch command, arguments, flags = LoadFlags(args); command {
 	case "help", "h":
 		doUsage()
 	case "init":
@@ -32,14 +37,18 @@ func main() {
 		_, err = doBuild()
 	case "serve":
 		err = doServe()
+	case "run":
+		err = doRun()
 	default:
-		danger(`Unknown command "`+command+`"`, usageSnip)
+		err = errors.New("Invalid given arguments")
+		danger(err, `Unknown command "`+command+`"`, usageSnip)
 		return
 	}
 
 	if err != nil {
 		danger(command, err)
 	}
+	return
 }
 
 func LoadFlags(rawArgs []string) (cmd string, args []string, f map[string]string) {
@@ -199,4 +208,45 @@ func doServe() (err error) {
 		port,
 		http.StripPrefix("/", http.FileServer(http.Dir("."+appDir))),
 	)
+}
+
+func doRun() (err error) {
+	// load settings and generate missing directories
+	settings, err := LoadSettings(flags["settings"])
+	if err != nil {
+		return errors.New("Cannot properly load settings, " + err.Error())
+	}
+	if len(settings.Run) == 0 {
+		return errors.New(`No stage in "run" pipeline`)
+	}
+
+	spaces := regexp.MustCompile(`\s+`)
+	for i, step := range settings.Run {
+		args := spaces.Split(step, -1)
+		if len(args) == 0 {
+			warn("Invalid run step", "Skipping empty given "+strconv.Itoa(i)+" step")
+			continue
+		}
+
+		running(step, "running step ", i+1, "/", len(settings.Run))
+		if args[0] == "wed" {
+			err = wed(args[1:]...)
+		} else {
+			err = run(args...)
+		}
+		if err != nil {
+			err = errors.New("Error at step " + strconv.Itoa(i) + ` "` + step + `": ` + err.Error())
+			return
+		}
+	}
+
+	return
+}
+
+func run(args ...string) (err error) {
+	var cmd = exec.Command(args[0], args[1:]...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = NewIndentWriter(" ", "\n\n", nil)
+	// cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
