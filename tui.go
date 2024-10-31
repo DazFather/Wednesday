@@ -44,12 +44,12 @@ func ShowUsage() {
 		a = [...]string{"mount"}
 
 		flagUsage = map[string]string{
-			"settings": "path to the settings file. if not given default one will be used",
+			"settings": "path to the settings file. If not given default one will be used",
 			"port":     "server port. If not given :8080 will be used",
 		}
 
 		argUsage = map[string]string{
-			"mount": "path to the directory to build. if not given it's assumed is the current working directory",
+			"mount": "path to the directory to build. If not given it's assumed is the current working directory",
 		}
 
 		commands = []struct {
@@ -69,7 +69,7 @@ func ShowUsage() {
 	for _, c := range commands {
 		fmt.Println("\n", magenta(padding(c.name)), c.desc)
 		for _, name := range c.args {
-			fmt.Println(gray("  ", cyan(name), " (optional) ", argUsage[name]))
+			fmt.Println(gray("  <", cyan(name), "> (optional) ", argUsage[name]))
 		}
 		for _, name := range c.flags {
 			fmt.Println(gray("  -", cyan(name[0:1]), " | -", cyan(name), " (optional) ", flagUsage[name]))
