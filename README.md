@@ -219,3 +219,55 @@ wed serve
 This command accepts the "settings" flags and the optional second argument "mount" like `wed build`, plus:
 "**port**" (or "p") to specify the port you want to serve your site on (default: `:8080`)
 > Example: `wed serve --port=":8081"`
+
+## 6. Pipeline Integration
+Wednesday can also help with CI/CD pipelines when a project grows on size thanks to some settings property
+
+### Declaring Custom Data
+You can declare custom data in the "Var" property of your settings file.
+This data can be accessed within your components HTML, allowing for dynamic content generation. Example:
+
+```json
+{
+  // ...
+  "Var": {
+    "site": {"Name": "My Awesome Site"},
+    "version": 1
+  }
+}
+```
+> `wed-settings.json`
+
+In your HTML templates, you can use these variables like this:
+
+```html
+<html>
+    <h1>Welcome to {{ .Var.site.Name }}</h1>
+    <p>Version: {{ .Var.version }}</p>
+</html>
+```
+> `welcome.wed.html`
+
+
+### Using `wed run`
+The `wed run` command allows you to automate workflow steps by executing a list of commands specified in the "Run" property of your settings file.
+The property value must be an array that lists each command to be executed by `wed run` in order. Example:
+
+```json
+{
+  // ...
+  "Run": [
+    "git stash",
+    "git checkout master",
+    "wed build",
+    "zip -r build.zip ./build"
+  ]
+}
+```
+
+To execute these commands sequentially, simply run:
+```bash
+wed run
+```
+
+This setup lets you automate and customize your project’s workflows with ease.

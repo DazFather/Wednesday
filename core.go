@@ -48,14 +48,14 @@ var (
 )
 
 type Settings struct {
-	HomeTempl string            `json:"HomeTempl,omitempty"`
-	HomeDir   string            `json:"HomeDir,omitempty"`
-	ScriptDir string            `json:"ScriptDir,omitempty"`
-	StyleDir  string            `json:"StyleDir,omitempty"`
-	Scripts   []string          `json:"Scripts,omitempty"`
-	Styles    []string          `json:"Styles,omitempty"`
-	Run       []string          `json:"Run,omitempty"`
-	Var       map[string]string `json:"Var,omitempty"`
+	HomeTempl string         `json:"HomeTempl,omitempty"`
+	HomeDir   string         `json:"HomeDir,omitempty"`
+	ScriptDir string         `json:"ScriptDir,omitempty"`
+	StyleDir  string         `json:"StyleDir,omitempty"`
+	Scripts   []string       `json:"Scripts,omitempty"`
+	Styles    []string       `json:"Styles,omitempty"`
+	Run       []string       `json:"Run,omitempty"`
+	Var       map[string]any `json:"Var,omitempty"`
 
 	home  *template.Template
 	funcs template.FuncMap
