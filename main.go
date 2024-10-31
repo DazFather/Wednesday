@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -124,10 +123,8 @@ func doInit() (s *Settings) {
 	}
 
 	// gen directories
-	for _, dir := range s.Dirs() {
-		if err = os.MkdirAll(filepath.Join(mountDir, dir), 0750); err != nil {
-			warn(`Cannot create "`+dir+`" directory`, err)
-		}
+	if err = s.genDirs(mountDir); err != nil {
+		warn(`Cannot create needed directory`, err)
 	}
 
 	// gen app component
@@ -170,7 +167,7 @@ func doBuild() (builtAt string, err error) {
 		if err = Build(builtAt, &settings); err != nil {
 			err = errors.New("Cannot build application, " + err.Error())
 		} else {
-			builtAt = filepath.Join(builtAt, settings.HomeDir)
+			builtAt = link(builtAt, settings.HomeDir)
 			success("build", "Find all the files in the directory", `"`+builtAt+`"`)
 		}
 	default:

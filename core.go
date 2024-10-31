@@ -7,6 +7,7 @@ import (
 	"errors"
 	"html/template"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -58,12 +59,13 @@ type Settings struct {
 	funcs template.FuncMap
 }
 
-func (s Settings) Dirs() []string {
-	return slices.Compact([]string{
-		s.HomeDir,
-		filepath.Join(s.HomeDir, s.ScriptDir),
-		filepath.Join(s.HomeDir, s.StyleDir),
-	})
+func (s Settings) genDirs(mountDir string) (err error) {
+	for _, dir := range slices.Compact([]string{s.ScriptDir, s.StyleDir}) {
+		if err = os.MkdirAll(filepath.Join(mountDir, s.HomeDir, dir), 0750); err != nil {
+			return
+		}
+	}
+	return
 }
 
 func LoadSettings(fileName string) (s Settings, err error) {
@@ -145,6 +147,10 @@ func Build(fromPath string, settings *Settings) (err error) {
 	return
 }
 
+func link(dir, name string) string {
+	return url.PathEscape(filepath.ToSlash(filepath.Join(dir, name)))
+}
+
 func (s *Settings) AddComponent(fileName string) (err error) {
 	// TODO: add component js and css only if component is being used
 	rawcontent, err := os.ReadFile(fileName)
@@ -162,7 +168,7 @@ func (s *Settings) AddComponent(fileName string) (err error) {
 			if _, err = genFile(true, content, dir, s.HomeDir, s.ScriptDir, name+".js"); err != nil {
 				return
 			}
-			s.Scripts = append(s.Scripts, filepath.Join(s.ScriptDir, name+".js"))
+			s.Scripts = append(s.Scripts, link(s.ScriptDir, name+".js"))
 		}
 	default:
 		return errors.New("Invalid component multiple <script> declaration")
@@ -178,7 +184,7 @@ func (s *Settings) AddComponent(fileName string) (err error) {
 			if _, err = genFile(true, buf.Bytes(), dir, s.HomeDir, s.StyleDir, name+".css"); err != nil {
 				return
 			}
-			s.Styles = append(s.Styles, filepath.Join(s.StyleDir, name+".css"))
+			s.Styles = append(s.Styles, link(s.StyleDir, name+".css"))
 		}
 	default:
 		return errors.New("Invalid component multiple <style> declaration")
