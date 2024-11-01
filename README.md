@@ -162,7 +162,7 @@ Retrieves a template and provides methods to facilitate content insertion into t
 ## 4. Building a webpage
 With your project set up, you're ready to build your site. Wednesday compiles your components, scripts, and styles into a static, deployable format.
 Use the following command to compile your project:
-```
+```shell
 wed build
 ```
 > This command processes all `.wed.html` components recursively from the specified directory (or current directory if none is given).
@@ -206,9 +206,10 @@ This is a design choice and one of the main difference between Wednesday and the
 > - If your project is small you can include a static server for the site on the same server where your other APIs lives
 > - If you receive too many requests then you can decide to scorporate the two by simply having another static server 
 
-Okay but what if you want an easy endpoint available on your browser instead of looking for your project folder? Or maybe you want an easy way to serve statically without relying on external tools.
-> **WIP** soon there will be also an option to make the server "live", or in other terms: rebuilds the app every time you make changes.
-> This can come really handy when making frequent changes at your codebase and check the output
+**Why there is a command:**
+> - To have an easy endpoint available on your browser instead of looking for your project folder
+> - Provides an easy way to serve statically without relying on external tools
+> - To check your changes "live" when you are doing frequent changes, more of that later
 
 Only for these reasons:
 ```shell
@@ -217,8 +218,10 @@ wed serve
 > The command will build the site and then serve the _HomeDir_ statically
 
 This command accepts the "settings" flags and the optional second argument "mount" like `wed build`, plus:
-"**port**" (or "p") to specify the port you want to serve your site on (default: `:8080`)
-> Example: `wed serve --port=":8081"`
+- "**port**" flag (or "p") to specify the port you want to serve your site on (default: `:8080`)
+   > Example: `wed serve --port=":8081"`
+- "**live**" flag (or "l") to rebuild the application each specified time interval
+   > Example: `wed serve -live=3s`
 
 ## 6. Pipeline Integration
 Wednesday can also help with CI/CD pipelines when a project grows on size thanks to some settings property

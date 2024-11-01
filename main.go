@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -60,6 +61,7 @@ func LoadFlags(rawArgs []string) (cmd string, args []string, f map[string]string
 	// default values
 	f = map[string]string{
 		"port":     defaultPort,
+		"live":     "",
 		"settings": "",
 	}
 
@@ -94,6 +96,15 @@ func LoadFlags(rawArgs []string) (cmd string, args []string, f map[string]string
 			warn("Invalid flag", `Invalid "port" property value (`+val+`). Default "`+defaultPort+`" will be used`)
 		} else if val[0] != ':' {
 			f["port"] = ":" + val
+		}
+	}
+
+	if val, found := f["live"]; found {
+		if poll, err := time.ParseDuration(val); err == nil {
+			f["live"] = strconv.Itoa(int(poll))
+		} else {
+			warn("Invalid flag", `Invalid "live" property value (`+val+`). Server will not rebuild application onece started`)
+			f["port"] = ""
 		}
 	}
 	return
@@ -197,6 +208,26 @@ func doServe() (err error) {
 	appDir, err := doBuild()
 	if err != nil {
 		return
+	}
+
+	if v := flags["live"]; v != "" {
+		var each time.Duration
+		if nano, e := strconv.Atoi(v); e == nil && nano > 0 {
+			each = time.Duration(nano)
+		} else {
+			panic(e)
+		}
+
+		tick := time.NewTicker(each)
+		defer tick.Stop()
+		go func() {
+			for range tick.C {
+				running("Live server", "building each", each.String())
+				if _, err := doBuild(); err != nil {
+					warn("Build failed", err)
+				}
+			}
+		}()
 	}
 
 	if appDir != "." {

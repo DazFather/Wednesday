@@ -50,6 +50,7 @@ func ShowUsage() {
 		flagUsage = map[string]string{
 			"settings": "path to the settings file. If not given default one will be used",
 			"port":     "server port. If not given :8080 will be used",
+			"live":     "Each time the application will be re-built",
 		}
 
 		argUsage = map[string]string{
