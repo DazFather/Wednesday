@@ -94,12 +94,14 @@ func LoadFlags(rawArgs []string) (cmd string, args []string, f map[string]string
 	if val, found := f["port"]; found {
 		if correct, _ := regexp.MatchString(`^:?[0-9]{1,4}$`, val); !correct {
 			warn("Invalid flag", `Invalid "port" property value (`+val+`). Default "`+defaultPort+`" will be used`)
+			val = defaultPort
 		} else if val[0] != ':' {
-			f["port"] = ":" + val
+			val = ":" + val
 		}
+		f["port"] = val
 	}
 
-	if val, found := f["live"]; found {
+	if val, found := f["live"]; found && val != "" {
 		if poll, err := time.ParseDuration(val); err == nil {
 			f["live"] = strconv.Itoa(int(poll))
 		} else {
