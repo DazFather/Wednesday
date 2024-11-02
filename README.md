@@ -1,4 +1,5 @@
 # Wednesday
+[![Go Report Card](https://goreportcard.com/badge/github.com/DazFather/Wednesday)](https://goreportcard.com/report/github.com/DazFather/Wednesday)
 **wed**nesday is a front-end web framework that aims to simplify things:
 
 - **No Node.js server**, no Deno, no Bun, no server! Build your own if you need one.
