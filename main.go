@@ -130,13 +130,14 @@ func doInit() (s *Settings) {
 	}
 
 	if s == nil {
+		var content []byte
 		s = &Settings{
 			HomeTempl: homeFileName,
 			HomeDir:   "build",
 			ScriptDir: "scripts",
 			StyleDir:  "styles",
 		}
-		if content, err := json.MarshalIndent(s, "", "\t"); err == nil {
+		if content, err = json.MarshalIndent(s, "", "\t"); err == nil {
 			_, err = genFile(false, content, mountDir, fileName)
 		}
 		if err != nil {

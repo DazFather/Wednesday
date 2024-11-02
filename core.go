@@ -120,7 +120,7 @@ func genFile(force bool, content []byte, path ...string) (fileName string, err e
 }
 
 func Build(fromPath string, settings *Settings) (err error) {
-	content := []byte{}
+	var content []byte
 	if content, err = os.ReadFile(filepath.Join(fromPath, settings.HomeTempl)); err == nil {
 		settings.home, err = template.New(home).Funcs(settings.funcs).Parse(string(content))
 	}
