@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -10,9 +9,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
+	"sync"
 )
 
 const (
@@ -27,16 +26,9 @@ const (
 
 	COMPONENT_EXT   = ".wed.html"
 	COMPONENT_CLASS = "wed-component"
-
-	parsingFlags = "(?s)"
 )
 
 var (
-	html  = regexp.MustCompile(parsingFlags + `<html>(.*)</html>`)
-	css   = regexp.MustCompile(parsingFlags + `<style>(.*)</style>`)
-	js    = regexp.MustCompile(parsingFlags + `<script>(.*)</script>`)
-	endln = regexp.MustCompile("\n")
-
 	//go:embed resources/home.default.tmpl
 	homeTemplateContent []byte
 	//go:embed resources/app.default.wed.html
@@ -57,8 +49,11 @@ type Settings struct {
 	Run       []string       `json:"Run,omitempty"`
 	Var       map[string]any `json:"Var,omitempty"`
 
-	home  *template.Template
-	funcs template.FuncMap
+	wedScripts []wedScript
+	wedStyles  []wedScript
+	dynamics   map[string]string
+	home       *template.Template
+	funcs      template.FuncMap
 }
 
 func (s Settings) genDirs(mountDir string) (err error) {
@@ -93,10 +88,7 @@ func LoadSettings(fileName string) (s Settings, err error) {
 		s.HomeTempl = homeFileName
 	}
 
-	s.funcs = template.FuncMap{
-		"args": func(v ...any) []any { return v },
-	}
-
+	s.dynamics = make(map[string]string)
 	return
 }
 
@@ -120,6 +112,11 @@ func genFile(force bool, content []byte, path ...string) (fileName string, err e
 }
 
 func Build(fromPath string, settings *Settings) (err error) {
+	settings.funcs = template.FuncMap{
+		"args":          func(v ...any) []any { return v },
+		"importDynamic": settings.importDynamic,
+	}
+
 	var content []byte
 	if content, err = os.ReadFile(filepath.Join(fromPath, settings.HomeTempl)); err == nil {
 		settings.home, err = template.New(home).Funcs(settings.funcs).Parse(string(content))
@@ -138,6 +135,9 @@ func Build(fromPath string, settings *Settings) (err error) {
 	if err != nil {
 		return
 	}
+	if err = settings.genResources(); err != nil {
+		return
+	}
 
 	homePage, err := os.Create(filepath.Join(fromPath, settings.HomeDir, composedFileName))
 	if err != nil {
@@ -145,65 +145,68 @@ func Build(fromPath string, settings *Settings) (err error) {
 	}
 	defer homePage.Close()
 
-	err = settings.home.Execute(homePage, settings)
+	t, err := settings.home.Clone()
+	if err == nil {
+		err = t.Execute(homePage, settings)
+	}
 	return
 }
 
-func link(dir, name string) string {
-	return url.PathEscape(filepath.ToSlash(filepath.Join(dir, name)))
+func (s Settings) link(dir ...string) string {
+	var path = filepath.Join(dir...)
+	if p, err := filepath.Rel(s.HomeDir, path); err == nil {
+		path = p
+	}
+
+	return url.PathEscape(filepath.ToSlash(path))
 }
 
 func (s *Settings) AddComponent(fileName string) (err error) {
-	// TODO: add component js and css only if component is being used
 	rawcontent, err := os.ReadFile(fileName)
 	if err != nil {
 		return
 	}
 
-	dir, name := filepath.Split(fileName)
+	_, name := filepath.Split(fileName)
 	name = strings.TrimSuffix(name, COMPONENT_EXT)
 
-	switch matches := js.FindSubmatch(rawcontent); len(matches) {
-	case 0, 1:
-	case 2:
-		if content := bytes.TrimSpace(matches[1]); len(content) > 0 {
-			if _, err = genFile(true, content, dir, s.HomeDir, s.ScriptDir, name+".js"); err != nil {
-				return
-			}
-			s.Scripts = append(s.Scripts, link(s.ScriptDir, name+".js"))
-		}
-	default:
-		return errors.New("Invalid component multiple <script> declaration")
-	}
+	errch := make(chan error)
+	go func() {
+		var wg sync.WaitGroup
+		wg.Add(3)
 
-	switch matches := css.FindSubmatch(rawcontent); len(matches) {
-	case 0, 1:
-	case 2:
-		if content := bytes.TrimSpace(matches[1]); len(content) > 0 {
-			buf := bytes.NewBufferString("." + name + "." + COMPONENT_CLASS + " {\n\t")
-			buf.Write(endln.ReplaceAll(content, []byte{'\n', '\t'}))
-			buf.WriteString("\n}")
-			if _, err = genFile(true, buf.Bytes(), dir, s.HomeDir, s.StyleDir, name+".css"); err != nil {
-				return
+		go func() {
+			defer wg.Done()
+			if e := s.addJS(name, rawcontent); e != nil {
+				errch <- e
 			}
-			s.Styles = append(s.Styles, link(s.StyleDir, name+".css"))
-		}
-	default:
-		return errors.New("Invalid component multiple <style> declaration")
-	}
+		}()
 
-	switch matches := html.FindSubmatch(rawcontent); len(matches) {
-	case 0, 1:
-	case 2:
-		if content := bytes.TrimSpace(matches[1]); len(content) > 0 {
-			tmpl := strings.Builder{}
-			tmpl.WriteString(`<div class="` + name + ` ` + COMPONENT_CLASS + `">`)
-			tmpl.Write(endln.ReplaceAll(content, []byte{'\n', ' ', ' '}))
-			tmpl.WriteString("</div>")
-			_, err = s.home.New(name).Funcs(s.funcs).Parse(tmpl.String())
-		}
-	default:
-		return errors.New("Invalid component multiple <html> declaration")
+		go func() {
+			defer wg.Done()
+			if e := s.addCSS(name, rawcontent); e != nil {
+				errch <- e
+			}
+		}()
+
+		go func() {
+			defer wg.Done()
+			if e := s.addHTML(name, rawcontent); e != nil {
+				errch <- e
+			}
+		}()
+
+		wg.Wait()
+		close(errch)
+	}()
+
+	i := 0
+	for e := range errch {
+		danger(e)
+		i++
+	}
+	if i > 0 {
+		err = errors.New(`Invalid definition of component "` + name + `"`)
 	}
 
 	return

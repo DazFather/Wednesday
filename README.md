@@ -96,8 +96,27 @@ Another useful feature from the templating language is the ability to define add
 ```
 > `child.wed.html`
 
+#### Dynamic templates
+Sometimes web pages need to add components dynamically, such as when a user click on a button or after an HTTP call.
+Wednesday gots you cover, simply add the attribute "_type="dynamic"_" to the html tag
+> By default Wednesday will interpret an empty or missing "_type_" attribute as "_static_"
+> This is a precise strategy to improve client speed and reduce state management to only when necessary
+  
+In this way the html code will be wrapped again on a [template tag](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) having as the only attribute an "_id_" with the component name as the value such as `<template id="pippo">...</template>`.
+This template can be insert anywhere just by using `{{ importDynamic "component-name" }}`
+> In praticular this template call accepts a variadic number of template names.
+> It's possible to pass only the needed template_s_ or nothing to import them all
+
+At this point by manipulating the DOM in the standard way is possible to insert the template content anywhere
+> There is also an utility function [useTemplate](#useTemplate) that might cover many cases and help reduce the boilerplate
+
+A dynamic template can include static templates, share datas and snippets with others and do all other action allowed by the template engine
+
 ### `<script>`
-Here you can add JavaScript logic that will run once the page is fully loaded (`defer`). This script is shared across all components, giving you access to helpful utilities that WED provides to enhance component reactivity.
+Here you can add JavaScript logic that will run once the page is fully loaded (`defer`). 
+This script is shared across all components, giving access to helpful utilities that WED provides to enhance component reactivity.
+The import order of the components is currently alphabetical based on the file name but it might change in the future.
+If a component script require some definitions form another one it's possible to use the _require_ attribute giving as value a space-spareted components name (without the file extension)
 
 #### useDisplay
 When you want to update text on the screen:
@@ -130,13 +149,14 @@ Runs a callback whenever the value changes:
 
 #### useMirror
 _A sibling of useDisplay_, it provides controlled access to properties of a DOM element, allowing you to specify one or a list of properties.
+This can prevent accident where, especially on large codebases, a person might change the value of something is not supposed to.
 
 #### useBinds
 Binds properties between elements and an object, updating them in response to changes.
 use the `bind` HTML attribute on the elements you want to bind and then put the following values separated by '`:`'. Only the first is required:
 - The property of the element that you need to bind (ex. "innerText")
   > Notice that even though "class" is an HTML attribute, in JS to modify it directly you need to use "className". This is just an examples, there are other exceptions too (like "style") 
-- _(optional)_ The corresponding name (by default is the same of the propery) of the bind object on the JS side.
+- _(optional)_ The corresponding name (by default is the same of the property) of the bind object on the JS side.
   > This can be useful if you want to bind under the same name different elements properties
 - _(optional)_ An event name that you want to listen to and cause the value to be recomputed
   > If you are binding the "value" property on an "input" tag you might wanna listen to the "input" event in order to update the value on user input
@@ -144,23 +164,83 @@ use the `bind` HTML attribute on the elements you want to bind and then put the 
 You can binds multiple properties of the same element by separating them with a (or more) spaces like this: `bind="value:color:input innerText className:theme"`.
 A more complete example below:
 ```html
+<style>
+    pre { display: inline-block; }
+    h5 { color: indianred; }
+</style>
 <html>
-    <form>
-        <b>Welcome <span bind="innerText:user"></span>!</b>
-        <input type="text" bind="value:user:input" placeholder="Write your name here">
-        <input type="password" bind="value:password:input" placeholder="Write your password here">
-        <p>Your password <code bind="innerText:password"></code> is too weak!</p>
+    <form id="sign-up-form" action="./sign-up" method="POST">
+        <h3>Welcome <span bind="innerText:user"></span>!</h3>
+        <input type="text" autocomplete="off" id="kawa" name="kawa" bind="value:user:input" placeholder="Write your name here">
+        <input type="text" autocomplete="off" id="bonga" name="bonga" bind="value:password:input" placeholder="Write your password here">
+        <h5 hidden>Your password "<code><pre bind="innerText:password"></pre></code>" is too weak!</h5>
+        <input type="submit" value="Sign UP" disabled>
     </form>
-<html>
+</html>
 <script>
-    const form = useBinds("form")
+    const weak = useMirror("#sign-up-form h5", 'hidden')
+    const submit = useMirror("#sign-up-form input[type=submit]", 'disabled')
+    const form = useBinds("#sign-up-form", (val, key) => {
+      if (key === 'password') {
+        weak.hidden = val === '' || !(submit.disabled = val.length <= 5)
+      }
+      return val
+    })
     form.user = "Guest"
 </script>
 ```
 > `app.wed.html`
 
 #### useTemplate
-Retrieves a template and provides methods to facilitate content insertion into the DOM upon initialization.
+Retrieves a template by it's id and provides methods to facilitate content insertion into the DOM upon initialization.
+```html
+<style>
+    input[readonly] {
+        border: none;
+        outline: none;
+        background: transparent;
+        text-decoration: line-through;
+    }
+</style>
+<html type="dynamic">
+    <div>
+        <input type="checkbox" bind="checked:done:input">
+        <input type="text" bind="value:task:input readOnly:done"></span>
+    </div>
+</html>
+<script>
+    const { clone: newItem } = useTemplate("todo-item", templ => {
+        templ._binds = useBinds(templ)
+        return templ
+    })
+</script>
+```
+> `todo-time.wed.html`
+
+```html
+<html>
+    {{ importDynamic "todo-item" }}
+    <div id="todo-list">
+        <h1>TO DO LIST</h1>
+        <div>
+            <input type="text" placeholder="Write your task here">
+            <input type="button" value=" + " onclick="handleItemAdd()">
+        </div>
+    </div>
+</html>
+<script require="todo-item">
+    const holder = select("#todo-list")
+    const input = useMirror(holder.querySelector("input[type=text]"), 'value')
+
+    const handleItemAdd = () => {
+        const item = newItem()
+        item._binds.task = input.value
+        holder.appendChild(item)
+        input.value = ''
+    }
+</script>
+```
+> `app.wed.html`
 
 ## 4. Building a webpage
 With your project set up, you're ready to build your site. Wednesday compiles your components, scripts, and styles into a static, deployable format.

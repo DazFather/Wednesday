@@ -90,7 +90,6 @@ function useTemplate(templateID, init) {
   }
 }
 
-
 /**
  * Binds properties between elements and an object, updating them in response to events.
  * The element to bind must have the "bind" attribute set.

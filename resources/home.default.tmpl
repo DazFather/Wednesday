@@ -11,6 +11,7 @@
         {{ range $url := .Scripts }}<script defer type="text/javascript" src="{{ $url }}"></script>{{ end }}
     </head>
     <body>
+        {{ importDynamic }}
         {{ template "app" args "Wed" "nesday" }}
     </body>
 </html>

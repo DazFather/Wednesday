@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -190,7 +191,7 @@ func doBuild() (builtAt string, err error) {
 		if err = Build(builtAt, &settings); err != nil {
 			err = errors.New("Cannot build application, " + err.Error())
 		} else {
-			builtAt = link(builtAt, settings.HomeDir)
+			builtAt = filepath.Join(builtAt, settings.HomeDir)
 			success("build", "Find all the files in the directory", `"`+builtAt+`"`)
 		}
 	default:
