@@ -205,7 +205,7 @@ Retrieves a template by it's id and provides methods to facilitate content inser
 <html type="dynamic">
     <div>
         <input type="checkbox" bind="checked:done:input">
-        <input type="text" bind="value:task:input readOnly:done"></span>
+        <input type="text" bind="value:task:input readOnly:done">
     </div>
 </html>
 <script>
@@ -215,7 +215,7 @@ Retrieves a template by it's id and provides methods to facilitate content inser
     })
 </script>
 ```
-> `todo-time.wed.html`
+> `todo-item.wed.html`
 
 ```html
 <html>
