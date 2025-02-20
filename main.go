@@ -3,7 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"html/template"
+	"io"
+	"os"
+	"path/filepath"
 	"strings"
+
+	_ "embed"
 
 	"github.com/antchfx/htmlquery"
 )
@@ -18,6 +24,13 @@ type Component struct {
 }
 
 var ErrNoWHTMLData = errors.New("no whtml data found")
+
+var (
+	//go:embed templates/index.wed.html
+	indexTemplate string
+	//go:embed templates/app.wed.html
+	appTemplate string
+)
 
 func NewComponent(name, htmlContent string) (c Component, err error) {
 	doc, err := htmlquery.Parse(strings.NewReader(htmlContent))
@@ -46,6 +59,14 @@ func NewComponent(name, htmlContent string) (c Component, err error) {
 	return
 }
 
+func NewComponentReader(name string, r io.Reader) (c Component, err error) {
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return
+	}
+	return NewComponent(name, string(b))
+}
+
 func (c Component) WrappedStyle() string {
 	if c.Style == "" {
 		return ""
@@ -60,34 +81,86 @@ func (c Component) WrappedHTML() string {
 	return fmt.Sprintf(`<div class="%v wed-component">%v</div>`, c.Name, c.HTML)
 }
 
+func (c Component) WriteStyle(fpath string) error {
+	return os.WriteFile(fpath, []byte(c.WrappedStyle()), os.ModePerm)
+}
+
+func (c Component) WriteScript(fpath string) error {
+	return os.WriteFile(fpath, []byte(c.Style), os.ModePerm)
+}
+
+type TemplateData struct {
+	StylePaths  []string
+	ScriptPaths []string
+	t           *template.Template
+}
+
+func NewTemplateData() (TemplateData, error) {
+	t, err := template.New("index").Parse(indexTemplate)
+	if err != nil {
+		return TemplateData{}, err
+	}
+	return TemplateData{t: t}, nil
+}
+
+func (td *TemplateData) AddComponent(c Component) error {
+	stylePath := filepath.Join("style", c.Name+".css")
+	if err := c.WriteStyle(stylePath); err != nil {
+		return err
+	}
+	td.StylePaths = append(td.StylePaths, stylePath)
+
+	scriptPath := filepath.Join("script", c.Name+".js")
+	if err := c.WriteScript(scriptPath); err != nil {
+		return err
+	}
+	td.ScriptPaths = append(td.ScriptPaths, stylePath)
+
+	_, err := td.t.New(c.Name).Parse(c.WrappedHTML())
+	return err
+}
+
+func (td TemplateData) Build(wr io.Writer) error {
+	return td.t.Execute(wr, td)
+}
+
 func main() {
-	c, err := NewComponent("pippo", testHTML)
+	var components []Component
+
+	for _, fname := range os.Args[1:] {
+		f, err := os.Open(fname)
+		if err != nil {
+			panic(err)
+		}
+
+		name := filepath.Base(fname[:len(fname)-len(filepath.Ext(fname))])
+
+		c, err := NewComponentReader(name, f)
+		if err != nil {
+			panic(err)
+		}
+
+		components = append(components, c)
+		f.Close()
+	}
+
+	td, err := NewTemplateData()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("HTML:\n%s\n\nStyle:\n%s\n\nScript:\n%s\n", c.HTML, c.Style, c.Script)
-}
 
-const testHTML = `
-<style>
-    input[readonly] {
-        border: none;
-        outline: none;
-        background: transparent;
-        text-decoration: line-through;
-    }
-</style>
-<whtml>
-    <div>
-        <input type="checkbox" bind="checked:done:input">
-        <input type="text" bind="value:task:input readOnly:done">
-        {{ .Cazzi }}
-    </div>
-</whtml>
-<script>
-    const { clone: newItem } = useTemplate("todo-item", templ => {
-        templ._binds = useBinds(templ)
-        return templ
-    })
-</script>
-`
+	for _, c := range components {
+		if err := td.AddComponent(c); err != nil {
+			panic(err)
+		}
+	}
+
+	f, err := os.OpenFile("index.html", os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+
+	if err := td.Build(f); err != nil {
+		panic(err)
+	}
+}
