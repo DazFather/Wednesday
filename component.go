@@ -23,13 +23,6 @@ type Component struct {
 
 var ErrNoWHTMLData = errors.New("no whtml data found")
 
-var (
-	//go:embed templates/index.wed.html
-	indexTemplate string
-	//go:embed templates/app.wed.html
-	appTemplate string
-)
-
 func NewComponent(name, htmlContent string) (c Component, err error) {
 	doc, err := htmlquery.Parse(strings.NewReader(htmlContent))
 	if err != nil {

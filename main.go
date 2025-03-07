@@ -1,121 +1,91 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"html/template"
-	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	_ "embed"
 )
 
-type TemplateData struct {
-	Settings
-	StylePaths  []string
-	ScriptPaths []string
-	t           *template.Template
+var (
+	//go:embed templates/index.tmpl
+	indexTemplate []byte
+	//go:embed templates/app.wed.html
+	appTemplate []byte
+	//go:embed resources/style.default.css
+	defStyleContent []byte
+	//go:embed resources/wed-utils.js
+	defScriptContent []byte
+)
+
+func initCmd(args []string) (err error) {
+	var flags = flag.NewFlagSet("init", flag.ContinueOnError)
+
+	s, err := LoadSettings(flags, args, "wed-settings.json")
+	if os.IsNotExist(err) {
+		fmt.Println("WARNING: Missing settings file, using default settings\n", err)
+		s.OutputDir = "build"
+	}
+
+	m := map[string][]byte{
+		filepath.Join(s.OutputDir, "style", "wed-style.css"): defScriptContent,
+		filepath.Join(s.OutputDir, "script", "wed-utils.js"): defScriptContent,
+		filepath.Join(s.InputDir, "index.tmpl"):              indexTemplate,
+		filepath.Join(s.InputDir, "app.wed.html"):            indexTemplate,
+	}
+
+	for name, content := range m {
+		if err = os.WriteFile(name, content, os.ModePerm); err != nil {
+			return
+		}
+	}
+	return
 }
 
-func NewTemplateData(s Settings) (TemplateData, error) {
-	t, err := template.New("index").Parse(indexTemplate)
+func buildCmd(args []string) (err error) {
+	var flags = flag.NewFlagSet("build", flag.ContinueOnError)
+
+	s, err := LoadSettings(flags, args, "wed-settings.json")
+	if os.IsNotExist(err) {
+		fmt.Println("WARNING: Missing settings file, using default settings\n", err)
+		s.OutputDir = "build"
+	}
+
+	td, err := NewTemplateData(s)
 	if err != nil {
-		return TemplateData{}, err
-	}
-	return TemplateData{Settings: s, t: t}, nil
-}
-
-func (td *TemplateData) AddComponent(c Component) error {
-	stylePath := filepath.Join("style", c.Name+".css")
-	if err := c.WriteStyle(stylePath); err != nil {
-		return err
-	}
-	td.StylePaths = append(td.StylePaths, stylePath)
-
-	scriptPath := filepath.Join("script", c.Name+".js")
-	if err := c.WriteScript(scriptPath); err != nil {
-		return err
-	}
-	td.ScriptPaths = append(td.ScriptPaths, stylePath)
-
-	_, err := td.t.New(c.Name).Parse(c.WrappedHTML())
-	return err
-}
-
-func (td TemplateData) Build(wr io.Writer) error {
-	return td.t.Execute(wr, td)
-}
-
-func (td TemplateData) Walk() {
-	if td.InputDir == "" {
-		td.InputDir = "."
+		return
 	}
 
-	filepath.WalkDir(td.InputDir, func(path string, info fs.DirEntry, err error) error {
-		if err != nil {
-			fmt.Println(err)
-			return nil
-		}
-
-		if info.IsDir() || !strings.HasSuffix(info.Name(), ".wed.html") {
-			return nil
-		}
-
-		f, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		compName := strings.TrimSuffix(info.Name(), ".wed.html")
-		c, err := NewComponentReader(compName, f)
-		if err != nil {
-			return err
-		}
-
-		return td.AddComponent(c)
-	})
+	if err = td.Walk(); err == nil {
+		err = td.Build("index.html")
+	}
+	return
 }
 
 func main() {
-	var components []Component
-
-	for _, fname := range os.Args[1:] {
-		f, err := os.Open(fname)
-		if err != nil {
-			panic(err)
-		}
-
-		name := filepath.Base(fname[:len(fname)-len(filepath.Ext(fname))])
-
-		c, err := NewComponentReader(name, f)
-		if err != nil {
-			panic(err)
-		}
-
-		components = append(components, c)
-		f.Close()
+	if len(os.Args) < 2 {
+		fmt.Println("Missing command\nUse 'help' for usage")
+		return
 	}
 
-	td, err := NewTemplateData(Settings{})
+	var err error
+
+	switch os.Args[1] {
+	case "build":
+		err = buildCmd(os.Args[2:])
+	case "init":
+		err = initCmd(os.Args[2:])
+	case "help", "h", "-h", "--h", "-help", "--help":
+		flag.Usage()
+	case "version", "v", "-v", "--v", "-version", "--version":
+		fmt.Println("1.0 pre-alpha")
+	default:
+		err = fmt.Errorf("Unknown given command:", os.Args[1], "\nUse 'help' for usage")
+	}
+
 	if err != nil {
-		panic(err)
-	}
-
-	for _, c := range components {
-		if err := td.AddComponent(c); err != nil {
-			panic(err)
-		}
-	}
-
-	f, err := os.OpenFile("index.html", os.O_WRONLY, os.ModePerm)
-	if err != nil {
-		panic(err)
-	}
-
-	if err := td.Build(f); err != nil {
 		panic(err)
 	}
 }
