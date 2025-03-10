@@ -25,7 +25,7 @@ func initCmd(args []string) (err error) {
 
 	s, err := LoadSettings(flags, args, "wed-settings.json")
 	if os.IsNotExist(err) {
-		fmt.Println("WARNING: Missing settings file, using default settings\n", err)
+		fmt.Println("WARNING: Missing settings file, using default settings")
 		s.OutputDir = "build"
 	}
 
@@ -33,15 +33,18 @@ func initCmd(args []string) (err error) {
 		filepath.Join(s.OutputDir, "style", "wed-style.css"): defScriptContent,
 		filepath.Join(s.OutputDir, "script", "wed-utils.js"): defScriptContent,
 		filepath.Join(s.InputDir, "index.tmpl"):              indexTemplate,
-		filepath.Join(s.InputDir, "app.wed.html"):            indexTemplate,
 	}
 
 	for name, content := range m {
-		if err = os.WriteFile(name, content, os.ModePerm); err != nil {
+		if err = os.MkdirAll(filepath.Dir(name), 0755); err != nil {
+			return
+		}
+		if err = os.WriteFile(name, content, 0644); err != nil {
 			return
 		}
 	}
-	return
+
+	return os.WriteFile(filepath.Join(s.InputDir, "app.wed.html"), appTemplate, 0644)
 }
 
 func buildCmd(args []string) (err error) {
