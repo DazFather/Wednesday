@@ -27,6 +27,8 @@ func initCmd(args []string) (err error) {
 	if os.IsNotExist(err) {
 		fmt.Println("WARNING: Missing settings file, using default settings")
 		s.OutputDir = "build"
+	} else if err != nil {
+		return
 	}
 
 	m := map[string][]byte{
@@ -54,6 +56,8 @@ func buildCmd(args []string) (err error) {
 	if os.IsNotExist(err) {
 		fmt.Println("WARNING: Missing settings file, using default settings\n", err)
 		s.OutputDir = "build"
+	} else if err != nil {
+		return
 	}
 
 	td, err := NewTemplateData(s)
