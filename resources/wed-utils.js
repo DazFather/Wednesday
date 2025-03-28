@@ -8,7 +8,7 @@
  * @param {Target} target - The target to select.
  * @return {Element} The selected element.
  */
-export function select(target) {
+function select(target) {
 	return typeof target === "string" ? document.querySelector(target) : target;
 }
 
@@ -26,7 +26,7 @@ export function select(target) {
  * @param {MutatePropFn} [mutate] - Optional callback to mutate the value before being set.
  * @return {object} The mirror object.
  */
-export function useMirror(target, props, mutate) {
+function useMirror(target, props, mutate) {
 	const elem = select(target);
 	if (typeof props === "string") props = [props];
 
@@ -48,9 +48,9 @@ export function useMirror(target, props, mutate) {
  * Generates a function for editing the innerText of an element.
  * @param {Target} target - The target to select.
  * @param {(value: ?, elem: Element) => ?} [mutate] - Optional callback to modify the text before updating innerText.
- * @return {(text: string) => string} A export function to edit the target's innerText.
+ * @return {(text: string) => string} A function to edit the target's innerText.
  */
-export function useDisplay(target, mutate) {
+function useDisplay(target, mutate) {
 	const elem = select(target);
 
 	return !!mutate
@@ -72,7 +72,7 @@ export function useDisplay(target, mutate) {
  * @param {(cloned: Element) => ?} [mutate] - Optional callback to initialize the template on each clone.
  * @return {TemplateHandler} Utility methods for handling the template.
  */
-export function useTemplate(templateID, init) {
+function useTemplate(templateID, init) {
 	const templ = document.getElementById(templateID);
 	const clone = !init
 		? (target) => templ.content.cloneNode(true)
@@ -98,7 +98,7 @@ export function useTemplate(templateID, init) {
  * @param {MutatePropFn} [mutate] - Optional callback to change a property value before setting it.
  * @return {object} An object with bound properties.
  */
-export function useBinds(target, mutate) {
+function useBinds(target, mutate) {
 	const parent = select(target);
 	const res = {};
 
@@ -146,9 +146,9 @@ export function useBinds(target, mutate) {
  * Generates an object with a value property, triggering the provided function when modified.
  * @param {?} start - Initial state for the effect.
  * @param {(newValue: ?, oldValue: ?) => ?} onChange - Callback to run each time value is updated.
- * @return {{value: *}} An object with a value property, triggering the export function on change.
+ * @return {{value: *}} An object with a value property, triggering the onChange function.
  */
-export function useEffect(start, onChange) {
+function useEffect(start, onChange) {
 	let state = start;
 
 	return {
@@ -160,3 +160,6 @@ export function useEffect(start, onChange) {
 		},
 	};
 }
+
+export { select, useMirror, useDisplay, useTemplate, useBinds, useEffect }
+

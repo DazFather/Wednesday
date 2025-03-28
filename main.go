@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -78,6 +79,30 @@ func buildCmd(args []string) (err error) {
 	return
 }
 
+func serveCmd(args []string) (err error) {
+	const defPort = ":8080"
+	var flags = flag.NewFlagSet("serve", flag.ContinueOnError)
+	port := flags.String("port", defPort, "port for the local server")
+
+	flags.StringVar(port, "p", defPort, "shorthand for 'port'")
+	s, err := LoadSettings(flags, args, "wed-settings.json")
+	if os.IsNotExist(err) {
+		fmt.Println("WARNING: Missing settings file, using default settings")
+		s.OutputDir = "build"
+	} else if err != nil {
+		return
+	}
+
+	if len(*port) > 0 && (*port)[0] != ':' {
+		*port = ":" + *port
+	}
+
+	return http.ListenAndServe(
+		*port,
+		http.StripPrefix("/", http.FileServer(http.Dir("./"+s.OutputDir))),
+	)
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Missing command\nUse 'help' for usage")
@@ -91,6 +116,8 @@ func main() {
 		err = buildCmd(os.Args[2:])
 	case "init":
 		err = initCmd(os.Args[2:])
+	case "serve":
+		err = serveCmd(os.Args[2:])
 	case "help", "h", "-h", "--h", "-help", "--help":
 		flag.Usage()
 	case "version", "v", "-v", "--v", "-version", "--version":
