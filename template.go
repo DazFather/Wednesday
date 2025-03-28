@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,7 +18,7 @@ type TemplateData struct {
 }
 
 func NewTemplateData(s Settings) (td TemplateData, err error) {
-	index, err := os.ReadFile(filepath.Join(s.InputDir, "index.tmpl"))
+	index, err := os.ReadFile(filepath.Join(s.InputDir, indexTemplateName))
 	if err != nil {
 		return
 	}
@@ -29,26 +30,41 @@ func NewTemplateData(s Settings) (td TemplateData, err error) {
 	return
 }
 
-func (td *TemplateData) AddComponent(c Component) error {
-	stylePath := filepath.Join("style", c.Name+".css")
-	if err := c.WriteStyle(stylePath); err != nil {
-		return err
+func (td *TemplateData) AddComponent(c Component) (err error) {
+	if err = c.WriteStyle(td.StylePath(c.Name + ".css")); err != nil {
+		return
 	}
-	td.StylePaths = append(td.StylePaths, stylePath)
+	td.appendStyle(c.Name)
 
-	scriptPath := filepath.Join("script", c.Name+".js")
-	if err := c.WriteScript(scriptPath); err != nil {
-		return err
+	if err = c.WriteScript(td.ScriptPath(c.Name + ".js")); err != nil {
+		return
 	}
-	td.ScriptPaths = append(td.ScriptPaths, stylePath)
+	td.appendScript(c.Name)
 
-	_, err := td.t.New(c.Name).Parse(c.WrappedHTML())
-	return err
+	_, err = td.t.New(c.Name).Parse(c.WrappedHTML())
+	return
+}
+
+func (td *TemplateData) appendStyle(name string) {
+	link, err := url.JoinPath("style", name+".css")
+	if err != nil {
+		panic(err)
+	}
+	td.StylePaths = append(td.StylePaths, link)
+}
+
+func (td *TemplateData) appendScript(name string) {
+	link, err := url.JoinPath("script", name+".js")
+	if err != nil {
+		panic(err)
+	}
+	td.ScriptPaths = append(td.ScriptPaths, link)
 }
 
 func (td TemplateData) Build(home string) error {
-	f, err := os.OpenFile(filepath.Join(td.OutputDir, home), os.O_WRONLY, os.ModePerm)
+	f, err := os.Create(filepath.Join(td.OutputDir, home))
 	if err != nil {
+		fmt.Println("here")
 		return err
 	}
 	defer f.Close()
@@ -56,7 +72,7 @@ func (td TemplateData) Build(home string) error {
 	return td.t.Execute(f, td)
 }
 
-func (td TemplateData) Walk() error {
+func (td *TemplateData) Walk() error {
 	if td.InputDir == "" {
 		td.InputDir = "."
 	}

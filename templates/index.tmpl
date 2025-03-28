@@ -9,9 +9,9 @@
 		<link rel="stylesheet" href="{{ $url }}" />
 		{{ end }}
 		<!-- Scripts -->
-		<script type="text/javascript" src="script/wed-utils.js"></script>
+		<script type="module" src="script/wed-utils.js"></script>
 		{{ range $url := .ScriptPaths }}
-		<script defer type="text/javascript" src="{{ $url }}"></script>
+		<script defer type="module" src="{{ $url }}"></script>
 		{{ end }}
 	</head>
 	<body>

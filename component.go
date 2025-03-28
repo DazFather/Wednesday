@@ -77,5 +77,5 @@ func (c Component) WriteStyle(fpath string) error {
 }
 
 func (c Component) WriteScript(fpath string) error {
-	return os.WriteFile(fpath, []byte(c.Style), os.ModePerm)
+	return os.WriteFile(fpath, []byte(c.Script), os.ModePerm)
 }

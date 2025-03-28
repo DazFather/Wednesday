@@ -37,3 +37,11 @@ func LoadSettings(flags *flag.FlagSet, args []string, defaultValue string) (s Se
 
 	return NewSettingsFromJSON(filepath.Clean(*path))
 }
+
+func (s Settings) StylePath(filename string) string {
+	return filepath.Join(s.OutputDir, "style", filename)
+}
+
+func (s Settings) ScriptPath(filename string) string {
+	return filepath.Join(s.OutputDir, "script", filename)
+}
