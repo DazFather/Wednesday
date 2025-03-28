@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "embed"
 )
@@ -29,20 +30,16 @@ const (
 )
 
 func initCmd(args []string) (err error) {
-	var flags = flag.NewFlagSet("init", flag.ContinueOnError)
+	var flags = NewBaseFlags("init")
 
-	s, err := LoadSettings(flags, args, "wed-settings.json")
-	if os.IsNotExist(err) {
-		fmt.Println("WARNING: Missing settings file, using default settings")
-		s.OutputDir = "build"
-	} else if err != nil {
+	if err = flags.Parse(args); err != nil {
 		return
 	}
 
 	m := map[string][]byte{
-		s.StylePath(defStyleName):                    defStyleContent,
-		s.ScriptPath(defScriptName):                  defScriptContent,
-		filepath.Join(s.InputDir, indexTemplateName): indexTemplate,
+		flags.Settings.StylePath(defStyleName):                    defStyleContent,
+		flags.Settings.ScriptPath(defScriptName):                  defScriptContent,
+		filepath.Join(flags.Settings.InputDir, indexTemplateName): indexTemplate,
 	}
 
 	for name, content := range m {
@@ -54,21 +51,17 @@ func initCmd(args []string) (err error) {
 		}
 	}
 
-	return os.WriteFile(filepath.Join(s.InputDir, defAppName), appTemplate, 0644)
+	return os.WriteFile(filepath.Join(flags.Settings.InputDir, defAppName), appTemplate, 0644)
 }
 
 func buildCmd(args []string) (err error) {
-	var flags = flag.NewFlagSet("build", flag.ContinueOnError)
+	var flags = NewBaseFlags("build")
 
-	s, err := LoadSettings(flags, args, "wed-settings.json")
-	if os.IsNotExist(err) {
-		fmt.Println("WARNING: Missing settings file, using default settings")
-		s.OutputDir = "build"
-	} else if err != nil {
+	if err = flags.Parse(args); err != nil {
 		return
 	}
 
-	td, err := NewTemplateData(s)
+	td, err := NewTemplateData(flags.Settings)
 	if err != nil {
 		return
 	}
@@ -80,26 +73,21 @@ func buildCmd(args []string) (err error) {
 }
 
 func serveCmd(args []string) (err error) {
-	const defPort = ":8080"
-	var flags = flag.NewFlagSet("serve", flag.ContinueOnError)
-	port := flags.String("port", defPort, "port for the local server")
-
-	flags.StringVar(port, "p", defPort, "shorthand for 'port'")
-	s, err := LoadSettings(flags, args, "wed-settings.json")
-	if os.IsNotExist(err) {
-		fmt.Println("WARNING: Missing settings file, using default settings")
-		s.OutputDir = "build"
-	} else if err != nil {
+	var (
+		port  string
+		flags = NewBaseFlags("serve", portFlag(&port, ":8080"))
+	)
+	if err = flags.Parse(args); err != nil {
 		return
 	}
 
-	if len(*port) > 0 && (*port)[0] != ':' {
-		*port = ":" + *port
+	port = strings.TrimSpace(port)
+	if len(port) > 0 && port[0] != ':' {
+		port = ":" + port
 	}
 
-	return http.ListenAndServe(
-		*port,
-		http.StripPrefix("/", http.FileServer(http.Dir("./"+s.OutputDir))),
+	return http.ListenAndServe(port, http.StripPrefix("/",
+		http.FileServer(http.Dir("./"+flags.Settings.OutputDir))),
 	)
 }
 
