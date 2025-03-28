@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"strings"
+	"runtime"
 
 	_ "embed"
 )
@@ -29,17 +30,11 @@ const (
 	defAppName        = "app.wed.html"
 )
 
-func initCmd(args []string) (err error) {
-	var flags = NewBaseFlags("init")
-
-	if err = flags.Parse(args); err != nil {
-		return
-	}
-
+func doInit(s Settings) (err error) {
 	m := map[string][]byte{
-		flags.Settings.StylePath(defStyleName):                    defStyleContent,
-		flags.Settings.ScriptPath(defScriptName):                  defScriptContent,
-		filepath.Join(flags.Settings.InputDir, indexTemplateName): indexTemplate,
+		s.StylePath(defStyleName):                    defStyleContent,
+		s.ScriptPath(defScriptName):                  defScriptContent,
+		filepath.Join(s.InputDir, indexTemplateName): indexTemplate,
 	}
 
 	for name, content := range m {
@@ -51,70 +46,90 @@ func initCmd(args []string) (err error) {
 		}
 	}
 
-	return os.WriteFile(filepath.Join(flags.Settings.InputDir, defAppName), appTemplate, 0644)
+	return os.WriteFile(filepath.Join(s.InputDir, defAppName), appTemplate, 0644)
 }
 
-func buildCmd(args []string) (err error) {
-	var flags = NewBaseFlags("build")
-
-	if err = flags.Parse(args); err != nil {
-		return
-	}
-
-	td, err := NewTemplateData(flags.Settings)
+func doBuild(s Settings) error {
+	td, err := NewTemplateData(s.FileSettings)
 	if err != nil {
-		return
+		return err
 	}
 
 	if err = td.Walk(); err == nil {
 		err = td.Build("index.html")
 	}
+	return err
+}
+
+func doServe(s Settings) error {
+	return http.ListenAndServe(
+		s.port,
+		http.StripPrefix("/", http.FileServer(http.Dir("./"+s.OutputDir))),
+	)
+}
+
+func defaultShell() (sh, flag string) {
+	if runtime.GOOS == "windows" {
+		if sh = os.Getenv("COMSPEC"); sh == "" {
+			sh = "cmd.exe"
+		}
+		flag = "/c"
+	} else {
+		if sh = os.Getenv("SHELL"); sh == "" {
+			sh = "/bin/sh"
+		}
+		flag = "-c"
+	}
 	return
 }
 
-func serveCmd(args []string) (err error) {
-	var (
-		port  string
-		flags = NewBaseFlags("serve", portFlag(&port, ":8080"))
-	)
-	if err = flags.Parse(args); err != nil {
-		return
+func doRun(s Settings) error {
+	commands, ok := s.Commands[s.arg]
+	if !ok {
+		return fmt.Errorf("unknown command: %s", s.arg)
 	}
 
-	port = strings.TrimSpace(port)
-	if len(port) > 0 && port[0] != ':' {
-		port = ":" + port
+	sh, flag := defaultShell()
+	for _, c := range commands {
+		cmd := exec.Command(sh, flag, c)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			return err
+		}
 	}
 
-	return http.ListenAndServe(port, http.StripPrefix("/",
-		http.FileServer(http.Dir("./"+flags.Settings.OutputDir))),
-	)
+	return nil
 }
 
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Missing command\nUse 'help' for usage")
-		return
+		os.Exit(1)
 	}
 
 	var err error
-
 	switch os.Args[1] {
 	case "build":
-		err = buildCmd(os.Args[2:])
+		err = doBuild(buildFlags())
 	case "init":
-		err = initCmd(os.Args[2:])
+		err = doInit(initFlags())
 	case "serve":
-		err = serveCmd(os.Args[2:])
+		err = doServe(serveFlags())
+	case "run":
+		err = doRun(runFlags())
 	case "help", "h", "-h", "--h", "-help", "--help":
 		flag.Usage()
 	case "version", "v", "-v", "--v", "-version", "--version":
 		fmt.Println("1.0 pre-alpha")
 	default:
-		err = fmt.Errorf("Unknown given command:", os.Args[1], "\nUse 'help' for usage")
+		err = fmt.Errorf("Unknown given command: %v\n Use 'help' for usage\n", os.Args[1])
 	}
 
 	if err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }

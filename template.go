@@ -11,13 +11,13 @@ import (
 )
 
 type TemplateData struct {
-	Settings
+	FileSettings
 	StylePaths  []string
 	ScriptPaths []string
 	t           *template.Template
 }
 
-func NewTemplateData(s Settings) (td TemplateData, err error) {
+func NewTemplateData(s FileSettings) (td TemplateData, err error) {
 	index, err := os.ReadFile(filepath.Join(s.InputDir, indexTemplateName))
 	if err != nil {
 		return
@@ -25,7 +25,7 @@ func NewTemplateData(s Settings) (td TemplateData, err error) {
 
 	t, err := template.New("index").Parse(string(index))
 	if err == nil {
-		td = TemplateData{Settings: s, t: t}
+		td = TemplateData{FileSettings: s, t: t}
 	}
 	return
 }
