@@ -14,14 +14,25 @@ import (
 
 // Component struct to store extracted content
 type Component struct {
-	Name      string
-	HTML      string
-	Style     string
-	Script    string
-	IsDynamic bool
+	Name   string
+	HTML   string
+	Style  string
+	Script string
+	Type   ComponentType
 }
 
-var ErrNoWHTMLData = errors.New("no whtml data found")
+type ComponentType uint8
+
+const (
+	static ComponentType = iota
+	dynamic
+	hybrid
+)
+
+var (
+	ErrNoWHTMLData     = errors.New("no 'html' data found")
+	ErrInvalidTypeAttr = errors.New("invalid 'type' attribute")
+)
 
 func NewComponent(name, htmlContent string) (c Component, err error) {
 	doc, err := xmlquery.Parse(strings.NewReader(htmlContent))
@@ -35,7 +46,16 @@ func NewComponent(name, htmlContent string) (c Component, err error) {
 		return c, ErrNoWHTMLData
 	}
 	c.HTML = strings.TrimSpace(whtmlNode.OutputXML(false))
-	c.IsDynamic = whtmlNode.SelectAttr("type") == "dynamic"
+	switch whtmlNode.SelectAttr("type") {
+	case "", "static":
+		c.Type = static
+	case "dynamic":
+		c.Type = dynamic
+	case "hybrid":
+		c.Type = hybrid
+	default:
+		return c, ErrInvalidTypeAttr
+	}
 
 	styleNode := xmlquery.FindOne(doc, "//style")
 	if styleNode != nil {
@@ -65,11 +85,12 @@ func (c Component) WrappedStyle() string {
 	return fmt.Sprintf(`.%v.wed-component{%v}`, c.Name, c.Style)
 }
 
-func (c Component) WrappedHTML() string {
-	if c.IsDynamic {
-		return fmt.Sprintf(`<template id="%v"><div class="%v wed-component">%v</div></template>`, c.Name, c.Name, c.HTML)
-	}
+func (c Component) WrappedStaticHTML() string {
 	return fmt.Sprintf(`<div class="%v wed-component">%v</div>`, c.Name, c.HTML)
+}
+
+func (c Component) WrappedDynamicHTML() string {
+	return fmt.Sprintf(`<template id="%v"><div class="%v wed-component">%v</div></template>`, c.Name, c.Name, c.HTML)
 }
 
 func (c Component) WriteStyle(fpath string) error {

@@ -43,11 +43,16 @@ func (td *TemplateData) WriteComponent(t *template.Template, c Component) (err e
 	}
 	td.appendScript(c.Name)
 
-	if c.IsDynamic {
-		td.dynamics += c.WrappedHTML()
-	} else {
-		_, err = t.New(c.Name).Parse(c.WrappedHTML())
+	switch c.Type {
+	case static:
+		_, err = t.New(c.Name).Parse(c.WrappedStaticHTML())
+	case dynamic:
+		td.dynamics += c.WrappedDynamicHTML()
+	case hybrid:
+		td.dynamics += c.WrappedDynamicHTML()
+		_, err = t.New(c.Name).Parse(c.WrappedStaticHTML())
 	}
+
 	return
 }
 
