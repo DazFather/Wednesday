@@ -2,7 +2,7 @@ module github.com/DazFather/Wednesday
 
 go 1.23.4
 
-require github.com/antchfx/htmlquery v1.3.4
+require github.com/antchfx/xmlquery v1.4.4
 
 require (
 	github.com/antchfx/xpath v1.3.3 // indirect

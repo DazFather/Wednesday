@@ -15,14 +15,21 @@ type TemplateData struct {
 	ScriptPaths []string
 	pages       []*template.Template
 	components  []Component
+	dynamics    string
+	funcs       template.FuncMap
 }
 
-var TemplateFuncs = template.FuncMap{
-	"args": func(v ...any) []any { return v },
-}
+func NewTemplateData(s FileSettings) *TemplateData {
+	var td = TemplateData{FileSettings: s}
 
-func NewTemplateData(s FileSettings) (td TemplateData) {
-	return TemplateData{FileSettings: s}
+	td.funcs = template.FuncMap{
+		"args": func(v ...any) []any { return v },
+		"importdynamics": func() template.HTML {
+			return template.HTML(td.dynamics)
+		},
+	}
+
+	return &td
 }
 
 func (td *TemplateData) WriteComponent(t *template.Template, c Component) (err error) {
@@ -36,7 +43,9 @@ func (td *TemplateData) WriteComponent(t *template.Template, c Component) (err e
 	}
 	td.appendScript(c.Name)
 
-	if !c.IsDynamic {
+	if c.IsDynamic {
+		td.dynamics += c.WrappedHTML()
+	} else {
 		_, err = t.New(c.Name).Parse(c.WrappedHTML())
 	}
 	return
@@ -58,7 +67,7 @@ func (td *TemplateData) appendScript(name string) {
 	td.ScriptPaths = append(td.ScriptPaths, link)
 }
 
-func (td TemplateData) Build() error {
+func (td *TemplateData) Build() error {
 	t := template.New("temp")
 	for _, c := range td.components {
 		if err := td.WriteComponent(t, c); err != nil {
@@ -108,7 +117,7 @@ func (td *TemplateData) Walk() error {
 
 		switch ext {
 		case ".tmpl":
-			t, err := template.New(name).Funcs(TemplateFuncs).Parse(string(content))
+			t, err := template.New(name).Funcs(td.funcs).Parse(string(content))
 			if err != nil {
 				return err
 			}
