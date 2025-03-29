@@ -49,14 +49,11 @@ func doInit(s Settings) (err error) {
 	return os.WriteFile(filepath.Join(s.InputDir, defAppName), appTemplate, 0644)
 }
 
-func doBuild(s Settings) error {
-	td, err := NewTemplateData(s.FileSettings)
-	if err != nil {
-		return err
-	}
+func doBuild(s Settings) (err error) {
+	var td = NewTemplateData(s.FileSettings)
 
 	if err = td.Walk(); err == nil {
-		err = td.Build("index.html")
+		err = td.Build()
 	}
 	return err
 }

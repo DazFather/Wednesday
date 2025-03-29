@@ -7,30 +7,25 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type TemplateData struct {
 	FileSettings
 	StylePaths  []string
 	ScriptPaths []string
-	t           *template.Template
+	pages       []*template.Template
+	components  []Component
 }
 
-func NewTemplateData(s FileSettings) (td TemplateData, err error) {
-	index, err := os.ReadFile(filepath.Join(s.InputDir, indexTemplateName))
-	if err != nil {
-		return
-	}
-
-	t, err := template.New("index").Parse(string(index))
-	if err == nil {
-		td = TemplateData{FileSettings: s, t: t}
-	}
-	return
+var TemplateFuncs = template.FuncMap{
+	"args": func(v ...any) []any { return v },
 }
 
-func (td *TemplateData) AddComponent(c Component) (err error) {
+func NewTemplateData(s FileSettings) (td TemplateData) {
+	return TemplateData{FileSettings: s}
+}
+
+func (td *TemplateData) WriteComponent(t *template.Template, c Component) (err error) {
 	if err = c.WriteStyle(td.StylePath(c.Name + ".css")); err != nil {
 		return
 	}
@@ -41,7 +36,9 @@ func (td *TemplateData) AddComponent(c Component) (err error) {
 	}
 	td.appendScript(c.Name)
 
-	_, err = td.t.New(c.Name).Parse(c.WrappedHTML())
+	if !c.IsDynamic {
+		_, err = t.New(c.Name).Parse(c.WrappedHTML())
+	}
 	return
 }
 
@@ -61,15 +58,30 @@ func (td *TemplateData) appendScript(name string) {
 	td.ScriptPaths = append(td.ScriptPaths, link)
 }
 
-func (td TemplateData) Build(home string) error {
-	f, err := os.Create(filepath.Join(td.OutputDir, home))
-	if err != nil {
-		fmt.Println("here")
-		return err
+func (td TemplateData) Build() error {
+	t := template.New("temp")
+	for _, c := range td.components {
+		if err := td.WriteComponent(t, c); err != nil {
+			return err
+		}
 	}
-	defer f.Close()
 
-	return td.t.Execute(f, td)
+	for _, page := range td.pages {
+		for _, c := range t.Templates() {
+			page.AddParseTree(c.Name(), c.Tree)
+		}
+		f, err := os.Create(filepath.Join(td.OutputDir, page.Name()+".html"))
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		if err = page.Execute(f, td); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (td *TemplateData) Walk() error {
@@ -83,22 +95,42 @@ func (td *TemplateData) Walk() error {
 			return nil
 		}
 
-		if info.IsDir() || !strings.HasSuffix(info.Name(), ".wed.html") {
+		if info.IsDir() {
 			return nil
 		}
 
-		f, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
+		name, ext := splitExt(info.Name())
 
-		compName := strings.TrimSuffix(info.Name(), ".wed.html")
-		c, err := NewComponentReader(compName, f)
+		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
 
-		return td.AddComponent(c)
+		switch ext {
+		case ".tmpl":
+			t, err := template.New(name).Funcs(TemplateFuncs).Parse(string(content))
+			if err != nil {
+				return err
+			}
+			td.pages = append(td.pages, t)
+		case ".wed.html":
+			c, err := NewComponent(name, string(content))
+			if err != nil {
+				return err
+			}
+			td.components = append(td.components, c)
+		}
+
+		return nil
 	})
+}
+
+func splitExt(name string) (base, ext string) {
+	ext = filepath.Ext(name)
+	base = name[:len(name)-len(ext)]
+	if ext == ".html" {
+		b, e := splitExt(base)
+		return b, e + ext
+	}
+	return
 }
