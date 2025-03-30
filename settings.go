@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type FileSettings struct {
@@ -20,10 +21,11 @@ type FileSettings struct {
 
 type Settings struct {
 	FileSettings
-	port string
-	name string
-	tags string
-	arg  string
+	reload time.Duration
+	port   string
+	name   string
+	tags   string
+	arg    string
 }
 
 // NewSettingsFromJSON creates a new Settings instance from a JSON string.
@@ -63,6 +65,8 @@ func serveFlags() (s Settings) {
 
 	f.StringVar(&s.port, "port", ":8080", "port for the local server")
 	f.StringVar(&s.port, "p", ":8080", "shorthand for 'port'")
+	f.DurationVar(&s.reload, "live", 0, "reload server each time interval")
+	f.DurationVar(&s.reload, "l", 0, "shorthand for 'live'")
 
 	parseDefault(f, &s, os.Args[2:], "TODO")
 

@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	_ "embed"
 )
@@ -59,6 +60,34 @@ func doBuild(s Settings) (err error) {
 }
 
 func doServe(s Settings) error {
+	if err := doBuild(s); err != nil {
+		return err
+	}
+
+	if s.reload != 0 {
+		tick := time.NewTicker(s.reload)
+		defer tick.Stop()
+		go func() {
+			var (
+				err  error
+				prev string
+			)
+
+			fmt.Println("Live server, reloading each", s.reload)
+			for range tick.C {
+				if err = doBuild(s); err != nil {
+					if serr := err.Error(); serr != prev {
+						fmt.Println("\t---\nBuild failed:", serr)
+						prev = serr
+					}
+				} else if prev != "" {
+					fmt.Println("\t---\nBuild successfully")
+					prev = ""
+				}
+			}
+		}()
+	}
+
 	return http.ListenAndServe(
 		s.port,
 		http.StripPrefix("/", http.FileServer(http.Dir("./"+s.OutputDir))),
