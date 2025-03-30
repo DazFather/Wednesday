@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -20,6 +21,8 @@ type FileSettings struct {
 type Settings struct {
 	FileSettings
 	port string
+	name string
+	tags string
 	arg  string
 }
 
@@ -60,20 +63,8 @@ func serveFlags() (s Settings) {
 
 	f.StringVar(&s.port, "port", ":8080", "port for the local server")
 	f.StringVar(&s.port, "p", ":8080", "shorthand for 'port'")
-	f.Var(&s.FileSettings, "settings", "path for the settings json file")
-	f.Var(&s.FileSettings, "s", "shorthand for 'settings'")
-	// TODO: replace this with the appropriate help message.
-	f.Usage = func() { fmt.Println("TODO"); os.Exit(1) }
 
-	if err := f.Parse(os.Args[2:]); err != nil {
-		f.Usage()
-	}
-
-	if s.from == "" {
-		if err := s.FileSettings.Set("wed-settings.json"); err != nil && !os.IsNotExist(err) {
-			panic(err)
-		}
-	}
+	parseDefault(f, &s, os.Args[2:], "TODO")
 
 	s.port = strings.TrimSpace(s.port)
 	if len(s.port) > 0 && s.port[0] != ':' {
@@ -86,22 +77,8 @@ func serveFlags() (s Settings) {
 func initFlags() (s Settings) {
 	var f = flag.NewFlagSet("init", flag.ExitOnError)
 
-	f.Var(&s.FileSettings, "settings", "path for the settings json file")
-	f.Var(&s.FileSettings, "s", "shorthand for 'settings'")
-	// TODO: replace this with the appropriate help message.
-	f.Usage = func() { fmt.Println("TODO"); os.Exit(1) }
+	parseDefault(f, &s, os.Args[2:], "TODO")
 
-	if err := f.Parse(os.Args[2:]); err != nil {
-		f.Usage()
-	}
-
-	if s.from == "" {
-		if err := s.FileSettings.Set("wed-settings.json"); err != nil && !os.IsNotExist(err) {
-			panic(err)
-		}
-	}
-
-	s.arg = f.Arg(0)
 	if s.arg != "" {
 		s.InputDir, s.OutputDir = s.arg, filepath.Join(s.arg, s.OutputDir)
 	}
@@ -110,35 +87,83 @@ func initFlags() (s Settings) {
 }
 
 func buildFlags() (s Settings) {
-	var f = flag.NewFlagSet("build", flag.ExitOnError)
+	parseDefault(
+		flag.NewFlagSet("build", flag.ExitOnError),
+		&s,
+		os.Args[2:],
+		"TODO",
+	)
 
-	f.Var(&s.FileSettings, "settings", "path for the settings json file")
-	f.Var(&s.FileSettings, "s", "shorthand for 'settings'")
-	// TODO: replace this with the appropriate help message.
-	f.Usage = func() { fmt.Println("TODO"); os.Exit(1) }
+	return
+}
 
-	if err := f.Parse(os.Args[2:]); err != nil {
-		f.Usage()
+func runFlags() (s Settings) {
+	parseDefault(
+		flag.NewFlagSet("run", flag.ExitOnError),
+		&s,
+		os.Args[2:],
+		"TODO",
+	)
+
+	return
+}
+
+func libUseFlag(args []string) (s Settings) {
+	parseDefault(
+		flag.NewFlagSet("lib use", flag.ExitOnError),
+		&s,
+		args,
+		"TODO",
+	)
+
+	return
+}
+
+func libTrustFlag(args []string) (s Settings) {
+	var f = flag.NewFlagSet("lib trust", flag.ExitOnError)
+
+	f.StringVar(&s.name, "rename", "", "rename locally the trusted library")
+	f.StringVar(&s.name, "n", "", "shorthand for 'rename'")
+	f.StringVar(&s.arg, "local", "", "add a local library")
+	f.StringVar(&s.arg, "l", "", "shorthand for 'local'")
+
+	parseDefault(f, &s, args, "TODO")
+
+	if s.arg == "" {
+		s.arg = f.Arg(0)
+		s.name = cutExt(path.Base(s.arg))
+	} else if s.name == "" { // is local
+		s.name = cutExt(filepath.Base(s.arg))
 	}
 
-	if s.from == "" {
-		if err := s.FileSettings.Set("wed-settings.json"); err != nil && !os.IsNotExist(err) {
-			panic(err)
+	return
+}
+
+func libSearchFlag(args []string) (s Settings) {
+	var f = flag.NewFlagSet("lib search", flag.ExitOnError)
+
+	insensitive := f.Bool("i", false, "insensitive case pattern matching")
+	f.StringVar(&s.tags, "tags", "", "specify another pattern for tag matching")
+	f.StringVar(&s.tags, "t", "", "shorthand for 'tags'")
+
+	parseDefault(f, &s, args, "TODO")
+
+	if *insensitive {
+		s.arg = "(?i)" + s.arg
+		if s.tags != "" {
+			s.tags = "(?i)" + s.tags
 		}
 	}
 
 	return
 }
 
-func runFlags() (s Settings) {
-	var f = flag.NewFlagSet("run", flag.ExitOnError)
-
+func parseDefault(f *flag.FlagSet, s *Settings, args []string, usage string) {
 	f.Var(&s.FileSettings, "settings", "path for the settings json file")
 	f.Var(&s.FileSettings, "s", "shorthand for 'settings'")
-	// TODO: replace this with the appropriate help message.
-	f.Usage = func() { fmt.Println("TODO"); os.Exit(1) }
+	f.Usage = func() { fmt.Println(usage); os.Exit(1) }
 
-	if err := f.Parse(os.Args[2:]); err != nil {
+	if err := f.Parse(args); err != nil {
 		f.Usage()
 	}
 
@@ -148,6 +173,9 @@ func runFlags() (s Settings) {
 		}
 	}
 
-	s.arg = f.Arg(0)
+	if s.arg == "" {
+		s.arg = f.Arg(0)
+	}
+
 	return
 }

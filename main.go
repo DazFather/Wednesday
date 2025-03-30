@@ -101,6 +101,27 @@ func doRun(s Settings) error {
 	return nil
 }
 
+func doLib(args []string) (err error) {
+	if len(args) <= 1 {
+		return fmt.Errorf("not enough argument.\nUse 'help' for usage")
+	}
+
+	switch args[0] {
+	case "search":
+		err = doLibSearch(libSearchFlag(args))
+	case "trust":
+		err = doLibTrust(libTrustFlag(args))
+	case "distrust":
+		err = doLibDistrust(args[1])
+	case "use":
+		err = doLibUse(libUseFlag(args))
+	default:
+		err = fmt.Errorf("Unknown given lib subcommand: '%s'\nUse 'help' for usage", args[0])
+	}
+
+	return
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Missing command\nUse 'help' for usage")
@@ -109,6 +130,8 @@ func main() {
 
 	var err error
 	switch os.Args[1] {
+	case "lib":
+		err = doLib(os.Args[2:])
 	case "build":
 		err = doBuild(buildFlags())
 	case "init":
