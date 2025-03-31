@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -144,6 +143,8 @@ func doLib(args []string) (err error) {
 		err = doLibDistrust(args[1])
 	case "use":
 		err = doLibUse(libUseFlag(args))
+	case "help", "h", "-h", "--h", "-help", "--help":
+		libUsage()
 	default:
 		err = fmt.Errorf("Unknown given lib subcommand: '%s'\nUse 'help' for usage", args[0])
 	}
@@ -170,7 +171,7 @@ func main() {
 	case "run":
 		err = doRun(runFlags())
 	case "help", "h", "-h", "--h", "-help", "--help":
-		flag.Usage()
+		mainUsage()
 	case "version", "v", "-v", "--v", "-version", "--version":
 		fmt.Println("1.0 pre-alpha")
 	default:
