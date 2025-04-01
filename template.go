@@ -141,24 +141,27 @@ func (td *TemplateData) Walk() error {
 
 		name, ext := splitExt(info.Name())
 
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-
 		switch ext {
 		case ".tmpl":
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
 			t, err := template.New(name).Funcs(td.funcs).Parse(string(content))
 			if err != nil {
 				return err
 			}
 			td.pages = append(td.pages, t)
 		case ".wed.html":
-			c, err := NewComponent(name, string(content))
-			if err != nil {
-				return err
+			f, err := os.Open(path)
+			if err == nil {
+				defer f.Close()
+				var c Component
+				if c, err = NewComponentReader(name, f); err == nil {
+					td.components = append(td.components, c)
+				}
 			}
-			td.components = append(td.components, c)
+			return err
 		}
 
 		return nil

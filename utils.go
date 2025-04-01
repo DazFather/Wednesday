@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/xml"
 	"errors"
 	"io"
 	"net/http"
@@ -85,11 +86,17 @@ func defaultShell() (sh, flag string) {
 }
 
 func splitExt(name string) (base, ext string) {
-	ext = cutExt(name)
+	ext = strings.ToLower(cutExt(name))
 	base = name[:len(name)-len(ext)]
-	if strings.EqualFold(ext, ".html") {
+	if ext == ".html" {
 		ext = cutExt(base) + ext
 		base = name[:len(name)-len(ext)]
 	}
 	return
+}
+
+func validHTML(content string) error {
+	var dec = xml.NewDecoder(strings.NewReader(content))
+	dec.Strict = false
+	return dec.Decode(new(interface{}))
 }

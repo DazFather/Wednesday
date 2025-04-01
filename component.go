@@ -34,8 +34,8 @@ var (
 	ErrInvalidTypeAttr = errors.New("invalid 'type' attribute")
 )
 
-func NewComponent(name, htmlContent string) (c Component, err error) {
-	doc, err := xmlquery.Parse(strings.NewReader(htmlContent))
+func NewComponentReader(name string, content io.Reader) (c Component, err error) {
+	doc, err := xmlquery.Parse(content)
 	if err != nil {
 		return c, err
 	}
@@ -56,6 +56,9 @@ func NewComponent(name, htmlContent string) (c Component, err error) {
 	default:
 		return c, ErrInvalidTypeAttr
 	}
+	if err = validHTML(c.HTML); err != nil {
+		return
+	}
 
 	styleNode := xmlquery.FindOne(doc, "//style")
 	if styleNode != nil {
@@ -68,14 +71,6 @@ func NewComponent(name, htmlContent string) (c Component, err error) {
 	}
 
 	return
-}
-
-func NewComponentReader(name string, r io.Reader) (c Component, err error) {
-	b, err := io.ReadAll(r)
-	if err != nil {
-		return
-	}
-	return NewComponent(name, string(b))
 }
 
 func (c Component) WrappedStyle() string {
