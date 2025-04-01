@@ -3,14 +3,10 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -29,7 +25,7 @@ func (m ManifestItem) Download(outputDir, lib, name string) error {
 	}
 
 	if fmt.Sprintf("%x", sha256.Sum256(content)) != m.checksum {
-		return errors.New("failed checksum when downloading '" + lib + "/" + name + "' component")
+		return fmt.Errorf("failed checksum when downloading %q component", lib+"/"+name)
 	}
 
 	for depName, dep := range m.dependency {
@@ -107,11 +103,11 @@ func (manifests Collection) Find(search string) (lib, name string, selected Mani
 	}
 	switch len(results) {
 	case 0:
-		err = errors.New("cannot find any component named '" + name + "' on trusted libraries")
+		err = fmt.Errorf("cannot find any component named %q on trusted libraries", name)
 	case 1:
 		selected = manifests[results[0]][name]
 	default:
-		err = errors.New(strconv.Itoa(len(results)) + " matching components on different libraries: '" + strings.Join(results, ", ") + "'")
+		err = fmt.Errorf("%d matching components on different libraries: %q", len(results), strings.Join(results, ", "))
 	}
 
 	return
@@ -175,15 +171,11 @@ func doLibSearch(s Settings) (err error) {
 }
 
 func doLibTrust(s Settings) (err error) {
-	var content []byte
-	if strings.HasPrefix(s.arg, "http") {
-		content, err = getBody(s.arg)
-	} else if s.arg != "" {
-		content, err = os.ReadFile(s.arg)
-	} else {
-		return errors.New("missing manifest reference")
+	if s.arg == "" {
+		return fmt.Errorf("missing manifest reference")
 	}
 
+	content, err := getContent(s.arg)
 	if err != nil {
 		return
 	}
@@ -192,52 +184,21 @@ func doLibTrust(s Settings) (err error) {
 		return
 	}
 
-	configDir, err := os.UserConfigDir()
+	filename, err := getWedConfigDir("trusted", s.name+".json")
 	if err != nil {
 		return
 	}
 
-	return os.WriteFile(
-		filepath.Join(configDir, "wednesday", "trusted", s.name+".json"),
-		content,
-		0666,
-	)
+	return os.WriteFile(filename, content, 0666)
 }
 
-func doLibDistrust(lib string) error {
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return err
+func doLibUntrust(lib string) error {
+	filename, err := getWedConfigDir("trusted", lib+".json")
+	if err == nil {
+		err = os.Remove(filename)
 	}
 
-	return os.Remove(filepath.Join(configDir, "wednesday", "trusted", lib+".json"))
-}
-
-func cutExt(s string) string {
-	return s[:len(s)-len(filepath.Ext(s))]
-}
-
-func getBody(link string) (content []byte, err error) {
-	res, err := http.Get(link)
-	if err != nil {
-		return
-	}
-
-	if 200 <= res.StatusCode && res.StatusCode < 300 {
-		return nil, errors.New("invalid status code '" + res.Status + "'")
-	}
-
-	defer res.Body.Close()
-	return io.ReadAll(res.Body)
-}
-
-func extractLibName(s string) (lib, name string) {
-	if ind := strings.IndexAny(s, `\/`); ind == -1 {
-		name = s
-	} else {
-		name, lib = s[:ind], s[ind+1:]
-	}
-	return
+	return err
 }
 
 func doLibUse(s Settings) error {
@@ -247,12 +208,12 @@ func doLibUse(s Settings) error {
 	)
 
 	if lib != "" {
-		configDir, err := os.UserConfigDir()
+		filename, err := getWedConfigDir("trusted", lib+".json")
 		if err != nil {
 			return err
 		}
 
-		content, err := os.ReadFile(filepath.Join(configDir, "wednesday", "trusted", lib+".json"))
+		content, err := os.ReadFile(filename)
 		if err != nil {
 			return err
 		}
@@ -264,7 +225,7 @@ func doLibUse(s Settings) error {
 
 		ok := false
 		if found, ok = manifest[name]; !ok {
-			return errors.New("cannot find '" + name + "' on '" + lib + "' library")
+			return fmt.Errorf("cannot find %q on library %q", name, lib)
 		}
 	} else {
 		coll, err := LoadCollection()

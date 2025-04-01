@@ -11,7 +11,7 @@ import (
 )
 
 type FileSettings struct {
-	Vars      map[string]string   `json:"vars,omitempty"`
+	Var       map[string]string   `json:"vars,omitempty"`
 	Commands  map[string][]string `json:"commands,omitempty"`
 	OutputDir string              `json:"output_dir,omitempty"`
 	InputDir  string              `json:"input_dir,omitempty"`
@@ -35,7 +35,7 @@ func NewSettingsFromJSON(path string) (s FileSettings, err error) {
 		return
 	}
 
-	if err = json.Unmarshal(b, &s); err != nil {
+	if err = json.Unmarshal(b, &s); err == nil {
 		s.OutputDir, s.InputDir = filepath.Clean(s.OutputDir), filepath.Clean(s.InputDir)
 	}
 	return
@@ -229,10 +229,12 @@ Command Flags:
 `)
 	})
 
-	if strings.HasPrefix(s.arg, "http") {
-		s.name = cutExt(path.Base(s.arg))
-	} else {
-		s.name = cutExt(filepath.Base(s.arg))
+	if s.name == "" {
+		if url, err := cleanURL(s.arg); err == nil {
+			s.name = cutExt(path.Base(url))
+		} else {
+			s.name = cutExt(filepath.Base(s.arg))
+		}
 	}
 
 	return

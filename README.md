@@ -342,18 +342,22 @@ The property value must be an array that lists each command to be executed by `w
 ```json
 {
   // ...
-  "Run": [
-    "git stash",
-    "git checkout master",
-    "wed build",
-    "zip -r build.zip ./build"
-  ]
+  "Commands": {
+    "zip": [
+      "git stash",
+      "git pull",
+      "wed build",
+      "zip -r build.zip ./build"
+    ],
+    
+  }
 }
 ```
 
 To execute these commands sequentially, simply run:
 ```bash
-wed run
+wed run <command>
 ```
+> Example: `wed run zip`
 
 This setup lets you automate and customize your project’s workflows with ease.

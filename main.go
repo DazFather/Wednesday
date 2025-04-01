@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	_ "embed"
@@ -93,21 +92,6 @@ func doServe(s Settings) error {
 	)
 }
 
-func defaultShell() (sh, flag string) {
-	if runtime.GOOS == "windows" {
-		if sh = os.Getenv("COMSPEC"); sh == "" {
-			sh = "cmd.exe"
-		}
-		flag = "/c"
-	} else {
-		if sh = os.Getenv("SHELL"); sh == "" {
-			sh = "/bin/sh"
-		}
-		flag = "-c"
-	}
-	return
-}
-
 func doRun(s Settings) error {
 	commands, ok := s.Commands[s.arg]
 	if !ok {
@@ -139,8 +123,8 @@ func doLib(args []string) (err error) {
 		err = doLibSearch(libSearchFlag(args))
 	case "trust":
 		err = doLibTrust(libTrustFlag(args))
-	case "distrust":
-		err = doLibDistrust(args[1])
+	case "untrust":
+		err = doLibUntrust(args[1])
 	case "use":
 		err = doLibUse(libUseFlag(args))
 	case "help", "h", "-h", "--h", "-help", "--help":

@@ -23,8 +23,34 @@ func NewTemplateData(s FileSettings) *TemplateData {
 	var td = TemplateData{FileSettings: s}
 
 	td.funcs = template.FuncMap{
-		"args": func(v ...any) []any { return v },
-		"importdynamics": func() template.HTML {
+		"args": func(v ...any) []any {
+			return v
+		},
+		"hold": func(names ...string) (any, error) {
+			values := make([]template.HTML, len(names))
+			for i := range names {
+				for _, c := range td.components {
+					if c.Name == names[i] {
+						values[i] = template.HTML(c.WrappedStaticHTML())
+					}
+				}
+				if values[i] == "" {
+					return "", fmt.Errorf("cannot find component %q to hold", names[i])
+				}
+			}
+			if len(values) == 1 {
+				return values[0], nil
+			}
+			return values, nil
+		},
+		"embed": func(link string) (emb template.HTML, err error) {
+			content, err := getContent(link)
+			if err == nil {
+				emb = template.HTML(content)
+			}
+			return
+		},
+		"importDynamics": func() template.HTML {
 			return template.HTML(td.dynamics)
 		},
 	}
@@ -137,14 +163,4 @@ func (td *TemplateData) Walk() error {
 
 		return nil
 	})
-}
-
-func splitExt(name string) (base, ext string) {
-	ext = filepath.Ext(name)
-	base = name[:len(name)-len(ext)]
-	if ext == ".html" {
-		b, e := splitExt(base)
-		return b, e + ext
-	}
-	return
 }

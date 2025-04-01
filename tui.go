@@ -77,7 +77,7 @@ Global Flags:
                          If not exists './build' is used as 'OutputDir' and
                          the current working directory as 'InputDir'
 
-  -h, --help             Display help for a command
+  -h, --help             Display help for a specific command
 
 Run '`, wed, "help' for general usage")
 
