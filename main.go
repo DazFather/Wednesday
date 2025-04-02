@@ -128,7 +128,7 @@ func doLib(args []string) (err error) {
 	case "use":
 		err = doLibUse(libUseFlag(args))
 	case "help", "h", "-h", "--h", "-help", "--help":
-		libUsage(false)
+		libUsage(len(args) > 1 && (args[1] == "-nc" || args[1] == "--no-color"))
 	default:
 		err = fmt.Errorf("Unknown given lib subcommand: '%s'\nUse 'help' for usage", args[0])
 	}
@@ -138,20 +138,22 @@ func doLib(args []string) (err error) {
 
 func doHelp(s Settings) error {
 	switch s.name {
+	case "":
+		mainUsage(s.noColor)
 	case "lib":
 		switch s.arg {
-		case "", "untrust":
+		case "":
 			libUsage(s.noColor)
 		case "search":
 			libSearchUsage(s.noColor)
 		case "trust":
 			libTrustUsage(s.noColor)
-		// case "untrust":
-		// 	libUntrustUsage(s.noColor)
+		case "untrust":
+			libUntrustUsage(s.noColor)
 		case "use":
 			libUseUsage(s.noColor)
 		default:
-			return fmt.Errorf("Unknown given command: %v\n Use 'lib help' for usage\n", s.arg)
+			return fmt.Errorf("Unknown given command: %q\n Use 'lib help' for usage\n", s.arg)
 		}
 	case "build":
 		buildUsage(s.noColor)
@@ -162,7 +164,7 @@ func doHelp(s Settings) error {
 	case "run":
 		runUsage(s.noColor)
 	default:
-		return fmt.Errorf("Unknown given command: %v\n Use 'help' for usage\n", s.name)
+		return fmt.Errorf("Unknown given command: %q\n Use 'help' for usage\n", s.name)
 	}
 
 	return nil
@@ -187,11 +189,11 @@ func main() {
 	case "run":
 		err = doRun(runFlags())
 	case "help", "h", "-h", "--h", "-help", "--help":
-		doHelp(helpFlags())
+		err = doHelp(helpFlags())
 	case "version", "v", "-v", "--v", "-version", "--version":
 		fmt.Println("1.0 pre-alpha")
 	default:
-		err = fmt.Errorf("Unknown given command: %v\n Use 'help' for usage\n", os.Args[1])
+		err = fmt.Errorf("Unknown given command: %q\n Use 'help' for usage\n", os.Args[1])
 	}
 
 	if err != nil {

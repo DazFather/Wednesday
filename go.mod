@@ -3,7 +3,7 @@ module github.com/DazFather/Wednesday
 go 1.23.4
 
 require (
-	github.com/DazFather/brush v0.0.0-20250401164619-896cd76941c9
+	github.com/DazFather/brush v0.0.0-20250402111545-01b408e3b2da
 	github.com/antchfx/xmlquery v1.4.4
 )
 

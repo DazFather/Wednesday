@@ -176,6 +176,7 @@ func helpFlags() (s Settings) {
 	}
 
 	s.name, s.arg = f.Arg(0), f.Arg(1)
+
 	return
 }
 
