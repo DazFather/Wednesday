@@ -24,8 +24,10 @@ func (m ManifestItem) Download(outputDir, lib, name string) error {
 		return err
 	}
 
-	if fmt.Sprintf("%x", sha256.Sum256(content)) != m.checksum {
-		return fmt.Errorf("failed checksum when downloading %q component", lib+"/"+name)
+	if m.checksum != "" {
+		if fmt.Sprintf("%x", sha256.Sum256(content)) != m.checksum {
+			return fmt.Errorf("failed checksum when downloading %q component", lib+"/"+name)
+		}
 	}
 
 	for depName, dep := range m.dependency {
