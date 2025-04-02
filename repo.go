@@ -26,7 +26,7 @@ func (m ManifestItem) Download(outputDir, lib, name string) error {
 
 	if m.checksum != "" {
 		if fmt.Sprintf("%x", sha256.Sum256(content)) != m.checksum {
-			return fmt.Errorf("failed checksum when downloading %q component", lib+"/"+name)
+			return fmt.Errorf("failed checksum validation when downloading %q component", lib+"/"+name)
 		}
 	}
 
@@ -191,7 +191,12 @@ func doLibTrust(s Settings) (err error) {
 		return
 	}
 
-	return os.WriteFile(filename, content, 0666)
+	if err = os.WriteFile(filename, content, 0666); err != nil && os.IsNotExist(err) {
+		if err = os.MkdirAll(filepath.Dir(filename)); err == nil {
+			err = os.WriteFile(filename, content, 0666)
+		}
+	}
+	return
 }
 
 func doLibUntrust(lib string) error {
