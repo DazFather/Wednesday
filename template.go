@@ -15,12 +15,12 @@ type TemplateData struct {
 	ScriptPaths []string
 	pages       []*template.Template
 	components  []Component
-	dynamics    string
+	dynamics    map[string]string
 	funcs       template.FuncMap
 }
 
 func NewTemplateData(s FileSettings) *TemplateData {
-	var td = TemplateData{FileSettings: s}
+	var td = TemplateData{FileSettings: s, dynamics: make(map[string]string)}
 
 	td.funcs = template.FuncMap{
 		"args": func(v ...any) []any {
@@ -50,8 +50,29 @@ func NewTemplateData(s FileSettings) *TemplateData {
 			}
 			return
 		},
-		"importDynamics": func() template.HTML {
-			return template.HTML(td.dynamics)
+		"importDynamics": func(names ...string) (template.HTML, error) {
+			out, notFound := "", []string{}
+
+			if len(names) == 0 {
+				for _, c := range td.dynamics {
+					out += c
+				}
+				return template.HTML(out), nil
+			}
+
+			for _, name := range names {
+				c, ok := td.dynamics[name]
+				if !ok {
+					notFound = append(notFound, name)
+				} else {
+					out += c
+				}
+			}
+
+			if len(notFound) > 0 {
+				return template.HTML(out), fmt.Errorf("cannot dynamically import %v", notFound)
+			}
+			return template.HTML(out), nil
 		},
 	}
 
@@ -73,9 +94,9 @@ func (td *TemplateData) WriteComponent(t *template.Template, c Component) (err e
 	case static:
 		_, err = t.New(c.Name).Parse(c.WrappedStaticHTML())
 	case dynamic:
-		td.dynamics += c.WrappedDynamicHTML()
+		td.dynamics[c.Name] = c.WrappedDynamicHTML()
 	case hybrid:
-		td.dynamics += c.WrappedDynamicHTML()
+		td.dynamics[c.Name] = c.WrappedDynamicHTML()
 		_, err = t.New(c.Name).Parse(c.WrappedStaticHTML())
 	}
 
@@ -102,6 +123,12 @@ func (td *TemplateData) Build() error {
 	t := template.New("temp")
 	for _, c := range td.components {
 		if err := td.WriteComponent(t, c); err != nil {
+			return err
+		}
+	}
+
+	for name, c := range td.dynamics {
+		if _, err := t.New(name).Parse(c); err != nil {
 			return err
 		}
 	}

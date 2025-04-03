@@ -192,7 +192,7 @@ func doLibTrust(s Settings) (err error) {
 	}
 
 	if err = os.WriteFile(filename, content, 0666); err != nil && os.IsNotExist(err) {
-		if err = os.MkdirAll(filepath.Dir(filename)); err == nil {
+		if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err == nil {
 			err = os.WriteFile(filename, content, 0666)
 		}
 	}
