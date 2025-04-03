@@ -86,10 +86,10 @@ func defaultShell() (sh, flag string) {
 }
 
 func splitExt(name string) (base, ext string) {
-	ext = strings.ToLower(cutExt(name))
+	ext = strings.ToLower(filepath.Ext(name))
 	base = name[:len(name)-len(ext)]
 	if ext == ".html" {
-		ext = cutExt(base) + ext
+		ext = strings.ToLower(filepath.Ext(base)) + ext
 		base = name[:len(name)-len(ext)]
 	}
 	return

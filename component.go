@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/antchfx/xmlquery"
-
-	_ "embed"
 )
 
 // Component struct to store extracted content
@@ -45,7 +43,10 @@ func NewComponentReader(name string, content io.Reader) (c Component, err error)
 	if whtmlNode == nil {
 		return c, ErrNoWHTMLData
 	}
-	c.HTML = strings.TrimSpace(whtmlNode.OutputXML(false))
+	c.HTML = strings.TrimSpace(whtmlNode.OutputXMLWithOptions(
+		xmlquery.WithEmptyTagSupport(),
+		xmlquery.WithoutPreserveSpace(),
+	))
 	switch whtmlNode.SelectAttr("type") {
 	case "", "static":
 		c.Type = static

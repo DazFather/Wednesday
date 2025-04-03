@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type TemplateData struct {
@@ -28,15 +29,12 @@ func NewTemplateData(s FileSettings) *TemplateData {
 		},
 		"hold": func(names ...string) (any, error) {
 			values := make([]template.HTML, len(names))
-			for i := range names {
-				for _, c := range td.components {
-					if c.Name == names[i] {
-						values[i] = template.HTML(c.WrappedStaticHTML())
-					}
-				}
-				if values[i] == "" {
+			for i, name := range names {
+				str := new(strings.Builder)
+				if err := td.pages[0].ExecuteTemplate(str, name, td); err != nil {
 					return "", fmt.Errorf("cannot find component %q to hold", names[i])
 				}
+				values[i] = template.HTML(name)
 			}
 			if len(values) == 1 {
 				return values[0], nil
@@ -166,9 +164,7 @@ func (td *TemplateData) Walk() error {
 			return nil
 		}
 
-		name, ext := splitExt(info.Name())
-
-		switch ext {
+		switch name, ext := splitExt(info.Name()); ext {
 		case ".tmpl":
 			content, err := os.ReadFile(path)
 			if err != nil {
