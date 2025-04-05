@@ -47,6 +47,7 @@ func NewComponentReader(name string, content io.Reader) (c Component, err error)
 		xmlquery.WithEmptyTagSupport(),
 		xmlquery.WithoutPreserveSpace(),
 	))
+
 	switch whtmlNode.SelectAttr("type") {
 	case "", "static":
 		c.Type = static
@@ -78,15 +79,15 @@ func (c Component) WrappedStyle() string {
 	if c.Style == "" {
 		return ""
 	}
-	return fmt.Sprintf(`.%v.wed-component{%v}`, c.Name, c.Style)
+	return fmt.Sprintf(`.%v-component.wed-component{%v}`, c.Name, c.Style)
 }
 
 func (c Component) WrappedStaticHTML() string {
-	return fmt.Sprintf(`<div class="%v wed-component">%v</div>`, c.Name, c.HTML)
+	return fmt.Sprintf(`<div class="%v-component wed-component">%v</div>`, c.Name, c.HTML)
 }
 
 func (c Component) WrappedDynamicHTML() string {
-	return fmt.Sprintf(`<template id="%v"><div class="%v wed-component">%v</div></template>`, c.Name, c.Name, c.HTML)
+	return fmt.Sprintf(`<template id="%v-component"><div class="%v-component wed-component">%v</div></template>`, c.Name, c.Name, c.HTML)
 }
 
 func (c Component) WriteStyle(fpath string) error {

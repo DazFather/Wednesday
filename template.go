@@ -34,7 +34,7 @@ func NewTemplateData(s FileSettings) *TemplateData {
 				if err := td.pages[0].ExecuteTemplate(str, name, td); err != nil {
 					return "", fmt.Errorf("cannot find component %q to hold", names[i])
 				}
-				values[i] = template.HTML(name)
+				values[i] = template.HTML(str.String())
 			}
 			if len(values) == 1 {
 				return values[0], nil
@@ -118,7 +118,7 @@ func (td *TemplateData) appendScript(name string) {
 }
 
 func (td *TemplateData) Build() error {
-	t := template.New("temp")
+	t := td.newTempl("temp")
 	for _, c := range td.components {
 		if err := td.WriteComponent(t, c); err != nil {
 			return err
@@ -149,6 +149,10 @@ func (td *TemplateData) Build() error {
 	return nil
 }
 
+func (td *TemplateData) newTempl(name string) *template.Template {
+	return template.New(name).Funcs(td.funcs).Delims("<!--{", "}-->")
+}
+
 func (td *TemplateData) Walk() error {
 	if td.InputDir == "" {
 		td.InputDir = "."
@@ -170,7 +174,7 @@ func (td *TemplateData) Walk() error {
 			if err != nil {
 				return err
 			}
-			t, err := template.New(name).Funcs(td.funcs).Parse(string(content))
+			t, err := td.newTempl(name).Parse(string(content))
 			if err != nil {
 				return err
 			}
