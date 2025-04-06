@@ -11,7 +11,7 @@ import (
 )
 
 type FileSettings struct {
-	Var       map[string]string   `json:"vars,omitempty"`
+	Var       map[string]any      `json:"vars,omitempty"`
 	Commands  map[string][]string `json:"commands,omitempty"`
 	OutputDir string              `json:"output_dir,omitempty"`
 	InputDir  string              `json:"input_dir,omitempty"`
