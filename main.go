@@ -124,7 +124,7 @@ func doLib(args []string) (err error) {
 	case "trust":
 		err = doLibTrust(libTrustFlag(args))
 	case "untrust":
-		err = doLibUntrust(args[1])
+		err = doLibUntrust(libUntrustFlag(args))
 	case "use":
 		err = doLibUse(libUseFlag(args))
 	case "help", "h", "-h", "--h", "-help", "--help":

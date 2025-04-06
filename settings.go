@@ -20,12 +20,13 @@ type FileSettings struct {
 
 type Settings struct {
 	FileSettings
-	reload  time.Duration
-	port    string
-	name    string
-	tags    string
-	arg     string
-	noColor bool
+	reload   time.Duration
+	port     string
+	name     string
+	tags     string
+	arg      string
+	noColor  bool
+	download bool
 }
 
 // NewSettingsFromJSON creates a new Settings instance from a JSON string.
@@ -130,7 +131,9 @@ func libTrustFlag(args []string) (s Settings) {
 	var f = flag.NewFlagSet("lib trust", flag.ExitOnError)
 
 	f.StringVar(&s.name, "rename", "", "rename locally the trusted library")
-	f.StringVar(&s.name, "n", "", "shorthand for 'rename'")
+	f.StringVar(&s.name, "r", "", "shorthand for 'rename'")
+	f.BoolVar(&s.download, "download", false, "download a copy of library for offline usage")
+	f.BoolVar(&s.download, "i", false, "shorthand for 'download'")
 
 	parseDefault(f, &s, args, libTrustUsage)
 
@@ -141,6 +144,17 @@ func libTrustFlag(args []string) (s Settings) {
 			s.name = cutExt(filepath.Base(s.arg))
 		}
 	}
+
+	return
+}
+
+func libUntrustFlag(args []string) (s Settings) {
+	parseDefault(
+		flag.NewFlagSet("lib untrust", flag.ExitOnError),
+		&s,
+		args,
+		libUntrustUsage,
+	)
 
 	return
 }

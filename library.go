@@ -182,25 +182,41 @@ func doLibTrust(s Settings) (err error) {
 		return
 	}
 
-	if err = json.Unmarshal(content, &map[string]ManifestItem{}); err != nil {
-		return
-	}
-
-	filename, err := getWedConfigDir("trusted", s.name+".json")
+	trusted, err := getWedConfigDir("trusted")
 	if err != nil {
 		return
 	}
 
-	if err = os.WriteFile(filename, content, 0666); err != nil && os.IsNotExist(err) {
-		if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err == nil {
-			err = os.WriteFile(filename, content, 0666)
+	var manifest = make(map[string]ManifestItem)
+	if err = json.Unmarshal(content, &manifest); err != nil {
+		return
+	}
+
+	if s.download {
+		if err = os.MkdirAll(filepath.Join(trusted, s.name), os.ModePerm); err != nil {
+			return
+		}
+
+		for name, c := range manifest {
+			if err = c.Download(trusted, s.name, name); err != nil {
+				return
+			}
+			c.download = filepath.Join(trusted, s.name, name+".wed.html")
 		}
 	}
+
+	manifestPath := filepath.Join(trusted, s.name+".json")
+	if err = os.WriteFile(manifestPath, content, 0666); err != nil && os.IsNotExist(err) {
+		if err = os.MkdirAll(trusted, os.ModePerm); err == nil {
+			err = os.WriteFile(manifestPath, content, 0666)
+		}
+	}
+
 	return
 }
 
-func doLibUntrust(lib string) error {
-	filename, err := getWedConfigDir("trusted", lib+".json")
+func doLibUntrust(s Settings) error {
+	filename, err := getWedConfigDir("trusted", s.arg+".json")
 	if err == nil {
 		err = os.Remove(filename)
 	}

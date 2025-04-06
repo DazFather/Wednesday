@@ -80,7 +80,8 @@ Sub-commands:
 
 `, magenta(" trust "), `Trust a library and download or copy locally it's manifest`, gray(`
    <`, cyan("link"), `> url or path to the library manifest
-   -`, cyan("r"), ` | --`, cyan("rename"), ` rename (locally) the trusted library`), `
+   -`, cyan("r"), ` | --`, cyan("rename"), ` rename (locally) the trusted library
+   -`, cyan("d"), ` | --`, cyan("download"), ` download all components and edit local manifest for offline usage`), `
 
 `, magenta(" untrust "), `Remove the manifest of the specified library`, gray(`
    <`, cyan("lib"), `> library unique name`), `
@@ -240,6 +241,8 @@ Command flags:`, gray(`
 
   -`, cyan("r"), ` | --`, cyan("rename"), ` Provide a name for the library.
    By default the name is extrapolated from the provided link
+  -`, cyan("d"), ` | --`, cyan("download"), ` Download all the components of the
+   library beforehand and change local manifest to point to the file just downloaded
 
 `), flagsUsage(noColor))
 
