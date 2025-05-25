@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 type TemplateData struct {
@@ -18,6 +19,7 @@ type TemplateData struct {
 	components  []Component
 	dynamics    map[string]string
 	funcs       template.FuncMap
+	collected   *template.Template
 }
 
 func NewTemplateData(s FileSettings) *TemplateData {
@@ -40,105 +42,186 @@ func NewTemplateData(s FileSettings) *TemplateData {
 		"dynamic": td.dynamic,
 	}
 
+	td.collected = td.newTempl("temp")
+
 	return &td
 }
 
-func (td *TemplateData) WriteComponent(t *template.Template, c Component) (err error) {
-	if err = c.WriteStyle(td.StylePath(c.Name + ".css")); err != nil {
-		return
+func (td *TemplateData) AddComponent(c Component) (err error) {
+	td.components = append(td.components, c)
+	if c.Style != "" {
+		td.appendStyle(c.Name)
 	}
-	td.appendStyle(c.Name)
-
-	if err = c.WriteScript(td.ScriptPath(c.Name + ".js")); err != nil {
-		return
+	if c.Script != "" {
+		td.appendScript(c.Name)
 	}
-	td.appendScript(c.Name)
 
 	switch c.Type {
-	case static:
-		_, err = t.New(c.Name).Parse(c.WrappedStaticHTML())
 	case dynamic:
 		td.dynamics[c.Name] = c.WrappedDynamicHTML()
 	case hybrid:
 		td.dynamics[c.Name] = c.WrappedDynamicHTML()
-		_, err = t.New(c.Name).Parse(c.WrappedStaticHTML())
+		fallthrough
+	case static:
+		_, err = td.collected.New(c.Name).Parse(c.WrappedStaticHTML())
 	}
 
 	return
 }
 
-func (td *TemplateData) Build() error {
-	t := td.newTempl("temp")
-	for _, c := range td.components {
-		if err := td.WriteComponent(t, c); err != nil {
+func (td TemplateData) WriteComponent(c Component) (err error) {
+	if c.Style != "" {
+		if err = c.WriteStyle(td.StylePath(c.Name + ".css")); err != nil {
 			return err
 		}
 	}
 
-	for name, c := range td.dynamics {
-		if _, err := t.New(name).Parse(c); err != nil {
-			return err
-		}
-	}
-
-	for _, page := range td.pages {
-		for _, c := range t.Templates() {
-			page.AddParseTree(c.Name(), c.Tree)
-		}
-		f, err := os.Create(filepath.Join(td.OutputDir, page.Name()+".html"))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		if err = page.Execute(f, td); err != nil {
-			return err
-		}
+	if c.Script != "" {
+		return c.WriteScript(td.ScriptPath(c.Name + ".js"))
 	}
 
 	return nil
 }
 
-func (td *TemplateData) Walk() error {
+func (td *TemplateData) buildStatics(errch chan<- error) bool {
+	var (
+		wg       sync.WaitGroup
+		once     sync.Once
+		success  = true
+		onceBody = func() { success = false }
+	)
+
+	wg.Add(len(td.components))
+	for _, c := range td.components {
+		go func() {
+			if err := td.WriteComponent(c); err != nil {
+				once.Do(onceBody)
+				errch <- err
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	return success
+}
+
+func (td *TemplateData) buildDynamics(wg *sync.WaitGroup, errch chan<- error) {
+	var dynamicsLock sync.Mutex
+
+	wg.Add(len(td.dynamics))
+	for name, content := range td.dynamics {
+		go func() {
+			defer wg.Done()
+			templ, err := td.newTempl(name).Parse(content)
+			if err != nil {
+				errch <- err
+				return
+			}
+			for _, c := range td.collected.Templates() {
+				templ.AddParseTree(c.Name(), c.Tree)
+			}
+
+			sb := new(strings.Builder)
+			if err = templ.Execute(sb, td); err == nil {
+				dynamicsLock.Lock()
+				td.dynamics[name] = sb.String()
+				dynamicsLock.Unlock()
+			} else {
+				errch <- err
+			}
+		}()
+	}
+}
+
+func (td *TemplateData) buildPages(wg *sync.WaitGroup, errch chan<- error) {
+	wg.Add(len(td.pages))
+	for _, page := range td.pages {
+		go func() {
+			defer wg.Done()
+			for _, c := range td.collected.Templates() {
+				page.AddParseTree(c.Name(), c.Tree)
+			}
+
+			f, err := os.Create(filepath.Join(td.OutputDir, page.Name()+".html"))
+			if err != nil {
+				errch <- err
+				return
+			}
+			defer f.Close()
+
+			if err = page.Execute(f, td); err != nil {
+				errch <- err
+			}
+		}()
+	}
+}
+
+func (td *TemplateData) Build() chan error {
+	var errch = make(chan error)
+
+	if !td.buildStatics(errch) {
+		close(errch)
+		return errch
+	}
+
+	go func() {
+		wg := new(sync.WaitGroup)
+
+		td.buildDynamics(wg, errch)
+		td.buildPages(wg, errch)
+
+		wg.Wait()
+		close(errch)
+	}()
+
+	return errch
+}
+
+func (td *TemplateData) Walk() (errch chan error) {
 	if td.InputDir == "" {
 		td.InputDir = "."
 	}
 
-	return filepath.WalkDir(td.InputDir, func(path string, info fs.DirEntry, err error) error {
-		if err != nil {
-			fmt.Println(err)
-			return nil
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		switch name, ext := splitExt(info.Name()); ext {
-		case ".tmpl":
-			content, err := os.ReadFile(path)
-			if err != nil {
-				return err
+	errch = make(chan error)
+	go func() {
+		err := filepath.WalkDir(td.InputDir, func(path string, info fs.DirEntry, err error) error {
+			if info.IsDir() {
+				return nil
 			}
-			t, err := td.newTempl(name).Parse(string(content))
-			if err != nil {
-				return err
-			}
-			td.pages = append(td.pages, t)
-		case ".wed.html":
-			f, err := os.Open(path)
-			if err == nil {
-				defer f.Close()
-				var c Component
-				if c, err = NewComponentReader(name, f); err == nil {
-					td.components = append(td.components, c)
+
+			switch name, ext := splitExt(info.Name()); ext {
+			case ".tmpl":
+				content, err := os.ReadFile(path)
+				if err != nil {
+					errch <- fmt.Errorf("cannot read template %q: %s", path, err)
+				}
+				if t, err := td.newTempl(name).Parse(string(content)); err == nil {
+					td.pages = append(td.pages, t)
+				} else {
+					errch <- fmt.Errorf("cannot parse template %q: %s", path, err)
+				}
+			case ".wed.html":
+				content, err := os.ReadFile(path)
+				if err != nil {
+					errch <- fmt.Errorf("cannot read component %q: %s", path, err)
+				}
+				if c, err := NewComponent(name, content); err == nil {
+					td.AddComponent(c)
+				} else {
+					errch <- fmt.Errorf("cannot parse component %q: %s", path, err)
 				}
 			}
-			return err
-		}
 
-		return nil
-	})
+			return nil
+		})
+		if err != nil {
+			errch <- err
+		}
+		close(errch)
+	}()
+
+	return
 }
 
 func (td *TemplateData) newTempl(name string) *template.Template {
@@ -238,7 +321,7 @@ func (td *TemplateData) use(name string, opt ...ComponentInfo) (template.HTML, e
 		}
 	}
 
-	if err := td.pages[0].ExecuteTemplate(str, name, data); err != nil {
+	if err := td.collected.ExecuteTemplate(str, name, data); err != nil {
 		return "", err
 	}
 	return template.HTML(str.String()), nil

@@ -51,10 +51,18 @@ func doInit(s Settings) (err error) {
 func doBuild(s Settings) (err error) {
 	var td = NewTemplateData(s.FileSettings)
 
-	if err = td.Walk(); err == nil {
-		err = td.Build()
+	for _, fn := range []func() chan error{td.Walk, td.Build} {
+		i := 0
+		for err := range fn() {
+			i++
+			fmt.Println(i, "ERROR", err)
+		}
+		if i > 0 {
+			return fmt.Errorf("Failed to build site errors: %d", i)
+		}
 	}
-	return err
+
+	return nil
 }
 
 func doServe(s Settings) error {

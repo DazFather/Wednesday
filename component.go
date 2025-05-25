@@ -3,11 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
+	// "io"
 	"os"
-	"strings"
-
-	"github.com/antchfx/xmlquery"
+	// "strings"
+	"regexp"
+	// "github.com/antchfx/xmlquery"
 )
 
 // Component struct to store extracted content
@@ -28,50 +28,28 @@ const (
 )
 
 var (
-	ErrNoWHTMLData     = errors.New("no 'html' data found")
-	ErrInvalidTypeAttr = errors.New("invalid 'type' attribute")
+	ErrNoHTMLData       = errors.New("no 'html' data found")
+	ErrDuplicateTagData = errors.New("duplicate tag found")
+	ErrInvalidTypeAttr  = errors.New("invalid 'type' attribute")
 )
 
-func NewComponentReader(name string, content io.Reader) (c Component, err error) {
-	doc, err := xmlquery.Parse(content)
-	if err != nil {
-		return c, err
-	}
+var (
+	htmlRgx   = regexp.MustCompile(`(?s)<html(\s+type="\s*(\w+)\s*")?\s*>\s*(.*?)\s*</html>`)
+	styleRgx  = regexp.MustCompile(`(?s)<style\s*>\s*(.*?)\s*</style>`)
+	scriptRgx = regexp.MustCompile(`(?s)<script\s*>\s*(.*?)\s*</script>`)
+)
 
+func NewComponent(name string, content []byte) (c Component, err error) {
 	c.Name = name
-	whtmlNode := xmlquery.FindOne(doc, "//html")
-	if whtmlNode == nil {
-		return c, ErrNoWHTMLData
-	}
-	c.HTML = strings.TrimSpace(whtmlNode.OutputXMLWithOptions(
-		xmlquery.WithEmptyTagSupport(),
-		xmlquery.WithoutPreserveSpace(),
-	))
-
-	switch whtmlNode.SelectAttr("type") {
-	case "", "static":
-		c.Type = static
-	case "dynamic":
-		c.Type = dynamic
-	case "hybrid":
-		c.Type = hybrid
-	default:
-		return c, ErrInvalidTypeAttr
-	}
-	if err = validHTML(c.HTML); err != nil {
+	if c.HTML, c.Type, err = parseHTML(content); err != nil {
 		return
 	}
 
-	styleNode := xmlquery.FindOne(doc, "//style")
-	if styleNode != nil {
-		c.Style = strings.TrimSpace(styleNode.InnerText())
+	if c.Style, err = parseStyle(content); err != nil {
+		return
 	}
 
-	scriptNode := xmlquery.FindOne(doc, "//script")
-	if scriptNode != nil {
-		c.Script = strings.TrimSpace(scriptNode.InnerText())
-	}
-
+	c.Script, err = parseScript(content)
 	return
 }
 
@@ -96,4 +74,59 @@ func (c Component) WriteStyle(fpath string) error {
 
 func (c Component) WriteScript(fpath string) error {
 	return os.WriteFile(fpath, []byte(c.Script), os.ModePerm)
+}
+
+func parseHTML(content []byte) (inner string, cType ComponentType, err error) {
+	switch matches := htmlRgx.FindAllSubmatch(content, -1); len(matches) {
+	case 0:
+		err = ErrNoHTMLData
+	case 1:
+		if len(matches[0]) != 4 {
+			panic("INVALID HTML REGEXP")
+		}
+		switch string(matches[0][2]) {
+		case "", "static":
+			cType = static
+		case "dynamic":
+			cType = dynamic
+		case "hybrid":
+			cType = hybrid
+		default:
+			err = ErrInvalidTypeAttr
+		}
+		inner = string(matches[0][3])
+	default:
+		err = ErrDuplicateTagData
+	}
+	return
+}
+
+func parseStyle(content []byte) (inner string, err error) {
+	switch matches := styleRgx.FindAllSubmatch(content, -1); len(matches) {
+	case 0:
+		// skip
+	case 1:
+		if len(matches[0]) != 2 {
+			panic("INVALID CSS REGEXP")
+		}
+		inner = string(matches[0][1])
+	default:
+		err = ErrDuplicateTagData
+	}
+	return
+}
+
+func parseScript(content []byte) (inner string, err error) {
+	switch matches := scriptRgx.FindAllSubmatch(content, -1); len(matches) {
+	case 0:
+		// skip
+	case 1:
+		if len(matches[0]) != 2 {
+			panic("INVALID CSS REGEXP")
+		}
+		inner = string(matches[0][1])
+	default:
+		err = ErrDuplicateTagData
+	}
+	return
 }
