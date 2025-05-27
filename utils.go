@@ -10,7 +10,29 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 )
+
+type smap[K comparable, V any] sync.Map
+
+func (s *smap[K, V]) Load(key K) (V, bool) {
+	v, ok := (*sync.Map)(s).Load(key)
+	return v.(V), ok
+}
+
+func (s *smap[K, V]) Store(key K, val V) {
+	(*sync.Map)(s).Store(key, val)
+}
+
+func (s *smap[K, V]) Delete(key K) {
+	(*sync.Map)(s).Delete(key)
+}
+
+func (s *smap[K, V]) Range(fn func(K, V) bool) {
+	(*sync.Map)(s).Range(func(rk, rv any) bool {
+		return fn(rk.(K), rv.(V))
+	})
+}
 
 func cutExt(s string) string {
 	return s[:len(s)-len(filepath.Ext(s))]

@@ -17,13 +17,13 @@ type TemplateData struct {
 	ScriptPaths []string
 	pages       []*template.Template
 	components  []Component
-	dynamics    map[string]string
+	dynamics    smap[string, string]
 	funcs       template.FuncMap
 	collected   *template.Template
 }
 
 func NewTemplateData(s FileSettings) *TemplateData {
-	var td = TemplateData{FileSettings: s, dynamics: make(map[string]string)}
+	var td = TemplateData{FileSettings: s}
 
 	td.funcs = template.FuncMap{
 		"list": func(v ...any) []any { return v },
@@ -58,9 +58,9 @@ func (td *TemplateData) AddComponent(c Component) (err error) {
 
 	switch c.Type {
 	case dynamic:
-		td.dynamics[c.Name] = c.WrappedDynamicHTML()
+		td.dynamics.Store(c.Name, c.WrappedDynamicHTML())
 	case hybrid:
-		td.dynamics[c.Name] = c.WrappedDynamicHTML()
+		td.dynamics.Store(c.Name, c.WrappedDynamicHTML())
 		fallthrough
 	case static:
 		_, err = td.collected.New(c.Name).Parse(c.WrappedStaticHTML())
@@ -85,17 +85,15 @@ func (td TemplateData) WriteComponent(c Component) (err error) {
 
 func (td *TemplateData) buildStatics(errch chan<- error) bool {
 	var (
-		wg       sync.WaitGroup
-		once     sync.Once
-		success  = true
-		onceBody = func() { success = false }
+		wg      sync.WaitGroup
+		success = true
 	)
 
 	wg.Add(len(td.components))
 	for _, c := range td.components {
 		go func() {
 			if err := td.WriteComponent(c); err != nil {
-				once.Do(onceBody)
+				success = false
 				errch <- err
 			}
 			wg.Done()
@@ -106,16 +104,20 @@ func (td *TemplateData) buildStatics(errch chan<- error) bool {
 	return success
 }
 
-func (td *TemplateData) buildDynamics(wg *sync.WaitGroup, errch chan<- error) {
-	var dynamicsLock sync.Mutex
+func (td *TemplateData) buildDynamics(errch chan<- error) bool {
+	var (
+		wg      sync.WaitGroup
+		success = true
+	)
 
-	wg.Add(len(td.dynamics))
-	for name, content := range td.dynamics {
+	td.dynamics.Range(func(name, content string) bool {
+		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			templ, err := td.newTempl(name).Parse(content)
 			if err != nil {
 				errch <- err
+				success = false
 				return
 			}
 			for _, c := range td.collected.Templates() {
@@ -124,17 +126,22 @@ func (td *TemplateData) buildDynamics(wg *sync.WaitGroup, errch chan<- error) {
 
 			sb := new(strings.Builder)
 			if err = templ.Execute(sb, td); err == nil {
-				dynamicsLock.Lock()
-				td.dynamics[name] = sb.String()
-				dynamicsLock.Unlock()
+				td.dynamics.Store(name, sb.String())
 			} else {
+				success = false
 				errch <- err
 			}
 		}()
-	}
+		return false
+	})
+	wg.Wait()
+
+	return success
 }
 
-func (td *TemplateData) buildPages(wg *sync.WaitGroup, errch chan<- error) {
+func (td *TemplateData) buildPages(errch chan<- error) {
+	var wg sync.WaitGroup
+
 	wg.Add(len(td.pages))
 	for _, page := range td.pages {
 		go func() {
@@ -155,6 +162,8 @@ func (td *TemplateData) buildPages(wg *sync.WaitGroup, errch chan<- error) {
 			}
 		}()
 	}
+
+	wg.Wait()
 }
 
 func (td *TemplateData) Build() chan error {
@@ -166,12 +175,9 @@ func (td *TemplateData) Build() chan error {
 	}
 
 	go func() {
-		wg := new(sync.WaitGroup)
-
-		td.buildDynamics(wg, errch)
-		td.buildPages(wg, errch)
-
-		wg.Wait()
+		if td.buildDynamics(errch) {
+			td.buildPages(errch)
+		}
 		close(errch)
 	}()
 
@@ -263,14 +269,15 @@ func (td *TemplateData) dynamic(names ...string) (template.HTML, error) {
 	out, notFound := "", []string{}
 
 	if len(names) == 0 {
-		for _, c := range td.dynamics {
-			out += c
-		}
+		td.dynamics.Range(func(name, content string) bool {
+			out += content
+			return false
+		})
 		return template.HTML(out), nil
 	}
 
 	for _, name := range names {
-		c, ok := td.dynamics[name]
+		c, ok := td.dynamics.Load(name)
 		if !ok {
 			notFound = append(notFound, name)
 		} else {
