@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -11,6 +12,9 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 type smap[K comparable, V any] sync.Map
@@ -121,4 +125,90 @@ func validHTML(content string) error {
 	var dec = xml.NewDecoder(strings.NewReader(content))
 	dec.Strict = false
 	return dec.Decode(new(interface{}))
+}
+
+func watch(rootdir, builddir string, notify func() error) error {
+	var watcher, err = fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	defer watcher.Close()
+
+	err = filepath.Walk(rootdir, func(path string, info os.FileInfo, e error) error {
+		if e != nil {
+			return e
+		}
+
+		if info.IsDir() {
+			if path == builddir {
+				return filepath.SkipDir
+			}
+			watcher.Add(path)
+		}
+		return nil
+	})
+
+	for err == nil {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				continue
+			}
+
+			if event.Op.Has(fsnotify.Create) {
+				var info os.FileInfo
+				if info, err = os.Stat(event.Name); err == nil && info.IsDir() && event.Name != builddir {
+					watcher.Add(event.Name)
+				}
+			}
+			err = notify()
+		case e, ok := <-watcher.Errors:
+			if !ok {
+				continue
+			}
+			if e != nil {
+				err = e
+			}
+		}
+	}
+
+	return err
+}
+
+func each(reload time.Duration, notify func() error) error {
+	var tick = time.NewTicker(reload)
+	defer tick.Stop()
+
+	for range tick.C {
+		if err := notify(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func liveReload(success func(), fail func(string)) error {
+	errch, prev := make(chan error), ""
+	defer close(errch)
+
+	var fn = func() error {
+		serr := ""
+		for err := range build() {
+			serr += fmt.Sprintln(err)
+		}
+		if serr != prev {
+			if serr == "" {
+				success()
+			} else {
+				fail(serr)
+			}
+			prev = serr
+		}
+		return nil
+	}
+
+	if *settings.reload == 0 {
+		return watch(settings.InputDir, settings.OutputDir, fn)
+	}
+	return each(*settings.reload, fn)
 }

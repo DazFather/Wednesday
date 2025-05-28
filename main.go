@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
 
 	_ "embed"
 )
@@ -70,28 +69,11 @@ func doServe() error {
 		return err
 	}
 
-	if settings.reload != 0 {
-		tick := time.NewTicker(settings.reload)
-		defer tick.Stop()
-		go func() {
-			var prev string
-
-			hint("Live server, rebuilding each ", settings.reload, "\n")
-			for range tick.C {
-				serr := ""
-				for err := range build() {
-					serr += fmt.Sprintln(err)
-				}
-				if serr != prev {
-					if serr == "" {
-						printlnDone("build", "Site successfully rebuilt, no error found\n")
-					} else {
-						printlnFailed("build", "Cannot rebuild site fond:\n", serr)
-					}
-					prev = serr
-				}
-			}
-		}()
+	if settings.reload != nil {
+		go liveReload(
+			func() { printlnDone("build", "Site successfully rebuilt, no error found\n") },
+			func(serr string) { printlnFailed("build", "Cannot rebuild site fond:\n", serr) },
+		)
 	}
 
 	hint("Listening at: ", settings.port, "\nServing directory: ", settings.OutputDir, "\n")

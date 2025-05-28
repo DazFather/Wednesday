@@ -25,6 +25,8 @@ func printlnFailed(command string, vals ...any) {
 			command += " " + settings.arg
 		}
 		fmt.Printf("%s%s ", red.Paint(" x "), red.UseBgColor(brush.Red).Paint(" ", command, " "))
+	} else {
+		fmt.Print("[x] ")
 	}
 	fmt.Fprintln(os.Stderr, vals...)
 }
@@ -69,8 +71,8 @@ Commands:
    [`, cyan.Paint("mount"), `] directory to put the project into`), `
 
 `, magenta.Paint(" serve "), `Build and serve your project statically via http`, gray.Embed(`
-   -`, cyan.Paint("p"), ` | --`, cyan.Paint("port"), ` specify the server port. Default :8080
-   -`, cyan.Paint("l"), ` | --`, cyan.Paint("live"), ` enable automatic rebuilding at specified time interval`), `
+   -`, cyan.Paint("l"), ` | --`, cyan.Paint("live"), ` enable automatic rebuilding or at specified time interval
+   -`, cyan.Paint("p"), ` | --`, cyan.Paint("port"), ` specify the server port. Default :8080`), `
 
 `, magenta.Paint(" run <command> "), `Execute a user-defined pipeline of commands
 
@@ -81,7 +83,6 @@ Commands:
    `, cyan.Paint("use"), ` <component> Use a specific component in the current project`), `
 
 `, magenta.Embed(" h ", gray.Paint("|"), " help "), `Show detailed usage`, gray.Embed(`
-   -`, cyan.Paint("nc"), ` | --`, cyan.Paint("no-color"), ` force disable of colored output
    [`, cyan.Paint("command"), `] command to obtain usage about. If not provided this message is shown`), `
 
 `, magenta.Embed(" v ", gray.Paint("|"), " version "), "Display the current", wed, `version
@@ -119,7 +120,8 @@ func flagsUsage() string {
 	return fmt.Sprintln(`Global flags:`, gray.Embed(`
 
    -`, cyan.Paint("s"), ` | --`, cyan.Paint("settings"), ` Specify the path to the project settings file, by default 'wed-settings.json' will be used.
-    If not exists 'build' is used as 'OutputDir' and the current working directory as 'InputDir'
+    If not exists 'build' is used as 'output_dir' and the current working directory as 'input_dir'
+   -`, cyan.Paint("nc"), ` | --`, cyan.Paint("no-color"), ` Disable terminal colored output
    -`, cyan.Paint("h"), ` | --`, cyan.Paint("help"), ` Display help and detailed usage of a specific command`), `
 `)
 
@@ -134,8 +136,9 @@ If build phase fails, program exit without server running
 
 Command flags:`, gray.Embed(`
 
-  -`, cyan.Paint("p"), ` | --`, cyan.Paint("port"), ` Specify the server port by default :8080 will be used. Character ':' at the beginning is optional
-  -`, cyan.Paint("l"), ` | --`, cyan.Paint("live"), ` Enable rebuilding at a specified time interval. If 0 or value not provided there will be no rebuilding`), `
+   -`, cyan.Paint("l"), ` | --`, cyan.Paint("live"), ` Enable automatic rebuilding. If a non 0 time interval is specified, site will be rebuilt at that interval
+    If nothing is specified site will be rebuilt on each changes detected from the 'input_dir' recursively (except for the 'output_dir')
+   -`, cyan.Paint("p"), ` | --`, cyan.Paint("port"), ` Specify the server port by default :8080 will be used. Character ':' at the beginning is optional`), `
 
 `, flagsUsage())
 
@@ -159,16 +162,16 @@ func buildUsage() {
         Usage`, magenta.Paint(" build "), `command
 
 Compile the project into a static site.
-If not by 'InputDir' the current working directory will be used as entrypoint
+If not by 'input_dir' the current working directory will be used as entrypoint
 and all subdirectory will be checked recursively.
 The program will treats all files with extention '.wed.html' as components and
 '.tmpl' as pages.
 
 `, gray.Paint(`Where do things go to:`), `
-The output will be located at 'OutputDir' ('./build' by default). In the specific
+The output will be located at 'output_dir' ('./build' by default). In the specific
   CSS styles into 'style' subdirectory
   JS scripts into 'script' subdirectory
-All the pages at the top level inside 'OutputDir'
+All the pages at the top level inside 'output_dir'
 
 `, flagsUsage())
 
@@ -190,12 +193,12 @@ On other environments the os variable 'SHELL' will be used instead and
 if not found 'sh' will be used
 
 `, gray.Paint(`How to set a pipeline:`), `
-A pipeline can be set using the 'Commands' property on the project file settings.
+A pipeline can be set using the 'commands' property on the project file settings.
 This property is a map: command name -> sequence of operation to execute.
 Therefore two commands cannot have an identical name. Subcommand are not natively supported.
 example:
 `+codeBlock(`
-"Commands": {
+"commands": {
 	"update": [
 		"git fetch",
 		"git pull"
@@ -224,7 +227,7 @@ When using this command http call(s) will be made to download the component and
 if present it's dependencies.
 
 `, gray.Paint(`Where do things go to:`), `
-All components will be download inside a subdirectory of 'InputDir' (by default
+All components will be download inside a subdirectory of 'input_dir' (by default
 the current directory) called with the same library name of the requested one
 In order to avoid homonymous they will be renamed by prefixing it with the
 library name of the requested one followed by '-'

@@ -21,14 +21,14 @@ type FileSettings struct {
 }
 
 type Settings struct {
-	FileSettings
-	reload   time.Duration
+	reload   *time.Duration
 	port     string
 	name     string
 	tags     string
 	arg      string
 	download bool
 	quiet    bool
+	FileSettings
 }
 
 var settings Settings
@@ -37,7 +37,7 @@ var settings Settings
 func NewSettingsFromJSON(path string) (s FileSettings, err error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		s.OutputDir = "build"
+		s.OutputDir, s.InputDir = "build", "."
 		return
 	}
 
@@ -65,13 +65,30 @@ func (s FileSettings) String() string {
 	return s.from
 }
 
+func (s *Settings) parseLiveFlag(sduration string) error {
+	switch sduration {
+	case "false":
+		// skip
+	case "", "true":
+		s.reload = new(time.Duration)
+	default:
+		if t, err := time.ParseDuration(sduration); err == nil {
+			s.reload = &t
+		} else {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func serveFlags() {
 	var f = flag.NewFlagSet("serve", flag.ExitOnError)
 
 	f.StringVar(&settings.port, "port", ":8080", "port for the local server")
 	f.StringVar(&settings.port, "p", ":8080", "shorthand for 'port'")
-	f.DurationVar(&settings.reload, "live", 0, "reload server each time interval")
-	f.DurationVar(&settings.reload, "l", 0, "shorthand for 'live'")
+	f.BoolFunc("live", "reload server each time interval", settings.parseLiveFlag)
+	f.BoolFunc("l", "shorthand for 'live'", settings.parseLiveFlag)
 
 	parseDefault(f, os.Args[2:], serveUsage)
 
