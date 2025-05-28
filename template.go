@@ -359,6 +359,8 @@ func (td *TemplateData) props(props ...any) ComponentInfo {
 	return res
 }
 
+
+
 func (td *TemplateData) hold(templs ...any) (res ComponentInfo, err error) {
 	var (
 		last     string
@@ -406,4 +408,29 @@ func (td *TemplateData) drop(info ComponentInfo, names ...string) template.HTML 
 		}
 	}
 	return str
+}
+
+func build() chan error {
+	var (
+		td    = NewTemplateData(settings.FileSettings)
+		errch = make(chan error)
+	)
+
+	go func() {
+		defer close(errch)
+		for _, fn := range []func() chan error{td.Walk, td.Build} {
+			failed := false
+			for err := range fn() {
+				errch <- err
+				if !failed {
+					failed = true
+				}
+			}
+			if failed {
+				return
+			}
+		}
+	}()
+
+	return errch
 }

@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/DazFather/brush"
 )
 
 type FileSettings struct {
@@ -25,9 +27,11 @@ type Settings struct {
 	name     string
 	tags     string
 	arg      string
-	noColor  bool
 	download bool
+	quiet    bool
 }
+
+var settings Settings
 
 // NewSettingsFromJSON creates a new Settings instance from a JSON string.
 func NewSettingsFromJSON(path string) (s FileSettings, err error) {
@@ -61,43 +65,41 @@ func (s FileSettings) String() string {
 	return s.from
 }
 
-func serveFlags() (s Settings) {
+func serveFlags() {
 	var f = flag.NewFlagSet("serve", flag.ExitOnError)
 
-	f.StringVar(&s.port, "port", ":8080", "port for the local server")
-	f.StringVar(&s.port, "p", ":8080", "shorthand for 'port'")
-	f.DurationVar(&s.reload, "live", 0, "reload server each time interval")
-	f.DurationVar(&s.reload, "l", 0, "shorthand for 'live'")
+	f.StringVar(&settings.port, "port", ":8080", "port for the local server")
+	f.StringVar(&settings.port, "p", ":8080", "shorthand for 'port'")
+	f.DurationVar(&settings.reload, "live", 0, "reload server each time interval")
+	f.DurationVar(&settings.reload, "l", 0, "shorthand for 'live'")
 
-	parseDefault(f, &s, os.Args[2:], serveUsage)
+	parseDefault(f, os.Args[2:], serveUsage)
 
-	s.port = strings.TrimSpace(s.port)
-	if len(s.port) > 0 && s.port[0] != ':' {
-		s.port = ":" + s.port
+	settings.port = strings.TrimSpace(settings.port)
+	if len(settings.port) > 0 && settings.port[0] != ':' {
+		settings.port = ":" + settings.port
 	}
 
 	return
 }
 
-func initFlags() (s Settings) {
+func initFlags() {
 	parseDefault(
 		flag.NewFlagSet("init", flag.ExitOnError),
-		&s,
 		os.Args[2:],
 		initUsage,
 	)
 
-	if s.arg != "" {
-		s.InputDir, s.OutputDir = s.arg, filepath.Join(s.arg, s.OutputDir)
+	if settings.arg != "" {
+		settings.InputDir, settings.OutputDir = settings.arg, filepath.Join(settings.arg, settings.OutputDir)
 	}
 
 	return
 }
 
-func buildFlags() (s Settings) {
+func buildFlags() {
 	parseDefault(
 		flag.NewFlagSet("build", flag.ExitOnError),
-		&s,
 		os.Args[2:],
 		buildUsage,
 	)
@@ -105,10 +107,9 @@ func buildFlags() (s Settings) {
 	return
 }
 
-func runFlags() (s Settings) {
+func runFlags() {
 	parseDefault(
 		flag.NewFlagSet("run", flag.ExitOnError),
-		&s,
 		os.Args[2:],
 		runUsage,
 	)
@@ -116,10 +117,9 @@ func runFlags() (s Settings) {
 	return
 }
 
-func libUseFlag(args []string) (s Settings) {
+func libUseFlag(args []string) {
 	parseDefault(
 		flag.NewFlagSet("lib use", flag.ExitOnError),
-		&s,
 		args,
 		libUseUsage,
 	)
@@ -127,31 +127,30 @@ func libUseFlag(args []string) (s Settings) {
 	return
 }
 
-func libTrustFlag(args []string) (s Settings) {
+func libTrustFlag(args []string) {
 	var f = flag.NewFlagSet("lib trust", flag.ExitOnError)
 
-	f.StringVar(&s.name, "rename", "", "rename locally the trusted library")
-	f.StringVar(&s.name, "r", "", "shorthand for 'rename'")
-	f.BoolVar(&s.download, "download", false, "download a copy of library for offline usage")
-	f.BoolVar(&s.download, "i", false, "shorthand for 'download'")
+	f.StringVar(&settings.name, "rename", "", "rename locally the trusted library")
+	f.StringVar(&settings.name, "r", "", "shorthand for 'rename'")
+	f.BoolVar(&settings.download, "download", false, "download a copy of library for offline usage")
+	f.BoolVar(&settings.download, "i", false, "shorthand for 'download'")
 
-	parseDefault(f, &s, args, libTrustUsage)
+	parseDefault(f, args, libTrustUsage)
 
-	if s.name == "" {
-		if url, err := cleanURL(s.arg); err == nil {
-			s.name = cutExt(path.Base(url))
+	if settings.name == "" {
+		if url, err := cleanURL(settings.arg); err == nil {
+			settings.name = cutExt(path.Base(url))
 		} else {
-			s.name = cutExt(filepath.Base(s.arg))
+			settings.name = cutExt(filepath.Base(settings.arg))
 		}
 	}
 
 	return
 }
 
-func libUntrustFlag(args []string) (s Settings) {
+func libUntrustFlag(args []string) {
 	parseDefault(
 		flag.NewFlagSet("lib untrust", flag.ExitOnError),
-		&s,
 		args,
 		libUntrustUsage,
 	)
@@ -159,60 +158,62 @@ func libUntrustFlag(args []string) (s Settings) {
 	return
 }
 
-func libSearchFlag(args []string) (s Settings) {
+func libSearchFlag(args []string) {
 	var f = flag.NewFlagSet("lib search", flag.ExitOnError)
 
 	insensitive := f.Bool("i", false, "insensitive case pattern matching")
-	f.StringVar(&s.tags, "tags", "", "specify another pattern for tag matching")
-	f.StringVar(&s.tags, "t", "", "shorthand for 'tags'")
+	f.StringVar(&settings.tags, "tags", "", "specify another pattern for tag matching")
+	f.StringVar(&settings.tags, "t", "", "shorthand for 'tags'")
 
-	parseDefault(f, &s, args, libSearchUsage)
+	parseDefault(f, args, libSearchUsage)
 
 	if *insensitive {
-		s.arg = "(?i)" + s.arg
-		if s.tags != "" {
-			s.tags = "(?i)" + s.tags
+		settings.arg = "(?i)" + settings.arg
+		if settings.tags != "" {
+			settings.tags = "(?i)" + settings.tags
 		}
 	}
 
 	return
 }
 
-func helpFlags() (s Settings) {
+func helpFlags() {
 	var f = flag.NewFlagSet("help", flag.ExitOnError)
 
-	f.BoolVar(&s.noColor, "no-color", false, "force disable of colored output'")
-	f.BoolVar(&s.noColor, "nc", false, "shorthand for 'no-color'")
-	f.Usage = func() { doHelp(s); os.Exit(1) }
+	f.BoolVar(&brush.Disable, "no-color", false, "force disable of colored output'")
+	f.BoolVar(&brush.Disable, "nc", false, "shorthand for 'no-color'")
+	f.Usage = func() { doHelp(); os.Exit(1) }
 
 	if err := f.Parse(os.Args[2:]); err != nil {
 		f.Usage()
 	}
 
-	s.name, s.arg = f.Arg(0), f.Arg(1)
+	settings.name, settings.arg = f.Arg(0), f.Arg(1)
 
 	return
 }
 
-func parseDefault(f *flag.FlagSet, s *Settings, args []string, usage func(bool)) {
-	f.Var(&s.FileSettings, "settings", "path for the settings json file")
-	f.Var(&s.FileSettings, "s", "shorthand for 'settings'")
-	f.BoolVar(&s.noColor, "no-color", false, "force disable of colored output'")
-	f.BoolVar(&s.noColor, "nc", false, "shorthand for 'no-color'")
-	f.Usage = func() { usage(s.noColor); os.Exit(1) }
+func parseDefault(f *flag.FlagSet, args []string, usage func()) {
+	f.Var(&settings.FileSettings, "settings", "path for the settings json file")
+	f.Var(&settings.FileSettings, "s", "shorthand for 'settings'")
+	f.BoolVar(&settings.quiet, "quiet", false, "suppress feedback messages")
+	f.BoolVar(&settings.quiet, "q", false, "shorthand for 'quiet'")
+	f.BoolVar(&brush.Disable, "no-color", false, "force disable of colored output'")
+	f.BoolVar(&brush.Disable, "nc", false, "shorthand for 'no-color'")
+	f.Usage = func() { usage(); os.Exit(1) }
 
 	if err := f.Parse(args); err != nil {
 		f.Usage()
 	}
 
-	if s.from == "" {
-		if err := s.FileSettings.Set("wed-settings.json"); err != nil && !os.IsNotExist(err) {
+	if settings.from == "" {
+		if err := settings.FileSettings.Set("wed-settings.json"); err != nil && !os.IsNotExist(err) {
 			panic(err)
 		}
 	}
 
-	if s.arg == "" {
-		s.arg = f.Arg(0)
+	if settings.arg == "" {
+		settings.arg = f.Arg(0)
 	}
 
 	return

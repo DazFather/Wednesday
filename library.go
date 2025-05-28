@@ -152,13 +152,13 @@ func LoadCollection() (manifests Collection, err error) {
 	return
 }
 
-func doLibSearch(s Settings) (err error) {
+func doLibSearch() (err error) {
 	coll, err := LoadCollection()
 	if err != nil {
 		return
 	}
 
-	results, err := coll.Search(s.arg, s.tags)
+	results, err := coll.Search(settings.arg, settings.tags)
 	if err != nil {
 		return
 	}
@@ -172,12 +172,12 @@ func doLibSearch(s Settings) (err error) {
 	return
 }
 
-func doLibTrust(s Settings) (err error) {
-	if s.arg == "" {
+func doLibTrust() (err error) {
+	if settings.arg == "" {
 		return fmt.Errorf("missing manifest reference")
 	}
 
-	content, err := getContent(s.arg)
+	content, err := getContent(settings.arg)
 	if err != nil {
 		return
 	}
@@ -192,20 +192,20 @@ func doLibTrust(s Settings) (err error) {
 		return
 	}
 
-	if s.download {
-		if err = os.MkdirAll(filepath.Join(trusted, s.name), os.ModePerm); err != nil {
+	if settings.download {
+		if err = os.MkdirAll(filepath.Join(trusted, settings.name), os.ModePerm); err != nil {
 			return
 		}
 
 		for name, c := range manifest {
-			if err = c.Download(trusted, s.name, name); err != nil {
+			if err = c.Download(trusted, settings.name, name); err != nil {
 				return
 			}
-			c.download = filepath.Join(trusted, s.name, name+".wed.html")
+			c.download = filepath.Join(trusted, settings.name, name+".wed.html")
 		}
 	}
 
-	manifestPath := filepath.Join(trusted, s.name+".json")
+	manifestPath := filepath.Join(trusted, settings.name+".json")
 	if err = os.WriteFile(manifestPath, content, 0666); err != nil && os.IsNotExist(err) {
 		if err = os.MkdirAll(trusted, os.ModePerm); err == nil {
 			err = os.WriteFile(manifestPath, content, 0666)
@@ -215,8 +215,8 @@ func doLibTrust(s Settings) (err error) {
 	return
 }
 
-func doLibUntrust(s Settings) error {
-	filename, err := getWedConfigDir("trusted", s.arg+".json")
+func doLibUntrust() error {
+	filename, err := getWedConfigDir("trusted", settings.arg+".json")
 	if err == nil {
 		err = os.Remove(filename)
 	}
@@ -224,10 +224,10 @@ func doLibUntrust(s Settings) error {
 	return err
 }
 
-func doLibUse(s Settings) error {
+func doLibUse() error {
 	var (
 		found     ManifestItem
-		lib, name = extractLibName(s.arg)
+		lib, name = extractLibName(settings.arg)
 	)
 
 	if lib != "" {
@@ -261,5 +261,5 @@ func doLibUse(s Settings) error {
 		}
 	}
 
-	return found.Download(s.InputDir, lib, name)
+	return found.Download(settings.InputDir, lib, name)
 }
