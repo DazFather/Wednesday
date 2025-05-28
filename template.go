@@ -359,8 +359,6 @@ func (td *TemplateData) props(props ...any) ComponentInfo {
 	return res
 }
 
-
-
 func (td *TemplateData) hold(templs ...any) (res ComponentInfo, err error) {
 	var (
 		last     string
