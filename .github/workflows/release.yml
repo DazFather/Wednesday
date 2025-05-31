@@ -9,6 +9,8 @@ jobs:
   release:
     name: Build and Upload Binaries
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     strategy:
       matrix:
