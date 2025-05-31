@@ -1,11 +1,11 @@
 package internal
 
 import (
+	"errors"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
-	"errors"
-	"net/http"
 )
 
 func getBody(link string) (content []byte, err error) {

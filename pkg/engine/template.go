@@ -19,7 +19,7 @@ type TemplateData struct {
 	ScriptPaths []string
 	pages       []*template.Template
 	components  []Component
-	dynamics    Smap[string, string]
+	dynamics    util.Smap[string, string]
 	funcs       template.FuncMap
 	collected   *template.Template
 }
