@@ -1,4 +1,4 @@
-package main
+package engine
 
 import (
 	"fmt"
@@ -9,26 +9,28 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	util "github.com/DazFather/Wednesday/pkg/internal"
 )
 
 type TemplateData struct {
-	FileSettings
+	Settings
 	StylePaths  []string
 	ScriptPaths []string
 	pages       []*template.Template
 	components  []Component
-	dynamics    smap[string, string]
+	dynamics    Smap[string, string]
 	funcs       template.FuncMap
 	collected   *template.Template
 }
 
-func NewTemplateData(s FileSettings) *TemplateData {
-	var td = TemplateData{FileSettings: s}
+func NewTemplateData(s Settings) *TemplateData {
+	var td = TemplateData{Settings: s}
 
 	td.funcs = template.FuncMap{
 		"list": func(v ...any) []any { return v },
 		"embed": func(link string) (emb template.HTML, err error) {
-			content, err := getContent(link)
+			content, err := util.FetchContent(link)
 			if err == nil {
 				emb = template.HTML(content)
 			}
@@ -408,9 +410,9 @@ func (td *TemplateData) drop(info ComponentInfo, names ...string) template.HTML 
 	return str
 }
 
-func build() chan error {
+func Build(s Settings) chan error {
 	var (
-		td    = NewTemplateData(settings.FileSettings)
+		td    = NewTemplateData(s)
 		errch = make(chan error)
 	)
 
