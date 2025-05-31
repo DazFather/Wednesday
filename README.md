@@ -9,11 +9,12 @@
 - **No mixed client-server code**, no headaches.
 
 ## 1. Installation
-Build Wednesday with:
+If you have go installed you can:
 ```shell
-go build -o wed
+go install github.com/DazFather/Wednesday/cmd/wed
 ```
-> To install it, you can simply follow the official Go (mini) tutorial [here](https://go.dev/doc/tutorial/compile-install), as with any other Go project.
+
+> For more info simply follow the official Go (mini) tutorial [here](https://go.dev/doc/tutorial/compile-install), as with any other Go project.
 
 ## 2. Initialize a project
 To initialize the current working directory as a new Wednesday project. Use the command 

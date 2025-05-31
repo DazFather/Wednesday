@@ -233,7 +233,7 @@ func (td *TemplateData) Walk() (errch chan error) {
 }
 
 func (td *TemplateData) newTempl(name string) *template.Template {
-	return template.New(name).Funcs(td.funcs).Delims("<!--{", "}-->")
+	return template.New(name).Funcs(td.funcs).Delims("{{", "}}")
 }
 
 func (td *TemplateData) appendStyle(name string) {

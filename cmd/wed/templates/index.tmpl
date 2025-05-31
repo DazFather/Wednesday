@@ -5,17 +5,15 @@
 		<meta charset="utf-8" />
 		<!-- Stylesheets -->
 		<link rel="stylesheet" href="style/wed-style.css" />
-		<!--{ range $url := .StylePaths }-->
-		<link rel="stylesheet" href="<!--{ $url }-->" />
-		<!--{ end }-->
+		{{ range $url := .StylePaths }}
+		<link rel="stylesheet" href="{{ $url }}" />
+		{{ end }}
 		<!-- Scripts -->
 		<script type="module" src="script/wed-utils.js"></script>
-		<!--{ range $url := .ScriptPaths }-->
-		<script defer type="module" src="<!--{ $url }-->"></script>
-		<!--{ end }-->
+		<script defer type="module" src="script/app.js"></script>
 	</head>
 	<body>
-		<!--{ dynamic }-->
-		<!--{ use "app" ( props "title" ( list "Wed" "nesday" ) ) }-->
+		{{ dynamic }}
+		{{ use "app" ( props "title" ( list "Wed" "nesday" ) ) }}
 	</body>
 </html>
