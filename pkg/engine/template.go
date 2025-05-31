@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	util "github.com/DazFather/Wednesday/pkg/internal"
+	util "github.com/DazFather/Wednesday/pkg/shared"
 )
 
 type TemplateData struct {
