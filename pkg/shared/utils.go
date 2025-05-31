@@ -22,7 +22,7 @@ func getBody(link string) (content []byte, err error) {
 	return io.ReadAll(res.Body)
 }
 
-func cleanURL(link string) (string, error) {
+func CleanURL(link string) (string, error) {
 	u, err := url.ParseRequestURI(link)
 	if err != nil {
 		return "", err
@@ -31,7 +31,7 @@ func cleanURL(link string) (string, error) {
 }
 
 func FetchContent(link string) (content []byte, err error) {
-	if url, e := cleanURL(link); e == nil {
+	if url, e := CleanURL(link); e == nil {
 		return getBody(url)
 	}
 	return os.ReadFile(link)
