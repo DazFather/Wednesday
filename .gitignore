@@ -3,7 +3,6 @@
 #
 # Binaries for programs and plugins
 Wednesday
-wed
 *.exe
 *.exe~
 *.dll

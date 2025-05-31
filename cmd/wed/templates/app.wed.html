@@ -1,0 +1,72 @@
+<style>
+	.flex-center {
+		display: inline-flex;
+		flex-direction: column;
+		place-content: center;
+		text-align: center;
+		margin: 0 auto;
+	}
+
+	.cover {
+		height: 100vh;
+		width: 100vw;
+		background-image: linear-gradient(
+			45deg,
+			hsl(0, 100%, 50%),
+			hsl(180, 100%, 50%)
+		);
+		color: whitesmoke;
+		font-size: 1.75em;
+		gap: 2em;
+	}
+
+	mark {
+		padding: 0.15em;
+		border-radius: 0.15em;
+	}
+
+	.card {
+		max-width: 40ch;
+		gap: 0.5em;
+
+		input[type="text"] {
+			font-size: 0.75em;
+			border: none;
+			outline: none;
+			padding: 0.25em 0.5em;
+			border-radius: 0.5em;
+			background-color: hsla(0, 0%, 100%, 0.5);
+		}
+	}
+</style>
+<html>
+	<div class="cover flex-center">
+		<header>
+			<!-- Example of useDisplay -->
+			<h1 class="title">loading...</h1>
+			<strong>to <mark><!--{ index .Props.title 0 }--></mark><!--{ index .Props.title 1 }--></strong>
+		</header>
+		<!-- Example of useBinds -->
+		<section class="card flex-center">
+			<strong
+				>Explore native
+				<mark bind="innerText:text">double bindings</mark></strong
+			>
+			<input
+				type="text"
+				placeholder="Write something"
+				bind="value:text:input"
+			/>
+		</section>
+	</div>
+</html>
+<script>
+	import { useDisplay, useBinds } from './wed-utils.js';
+
+	// Example of useDisplay
+	const show = useDisplay(".title", (text) => text + " !");
+	console.log(show("Welcome"));
+
+	// Example of useBinds
+	const explore = useBinds("section");
+</script>
