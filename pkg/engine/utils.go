@@ -2,8 +2,8 @@ package engine
 
 import (
 	"encoding/xml"
-	"strings"
 	"path/filepath"
+	"strings"
 )
 
 func splitExt(name string) (base, ext string) {
