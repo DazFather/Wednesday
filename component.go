@@ -3,11 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
-	// "io"
 	"os"
-	// "strings"
 	"regexp"
-	// "github.com/antchfx/xmlquery"
 )
 
 // Component struct to store extracted content
@@ -122,7 +119,7 @@ func parseScript(content []byte) (inner string, err error) {
 		// skip
 	case 1:
 		if len(matches[0]) != 2 {
-			panic("INVALID CSS REGEXP")
+			panic("INVALID JS REGEXP")
 		}
 		inner = string(matches[0][1])
 	default:
