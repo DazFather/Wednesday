@@ -13,15 +13,24 @@ If you have go installed you can:
 ```shell
 go install github.com/DazFather/Wednesday/cmd/wed
 ```
-
 > For more info simply follow the official Go (mini) tutorial [here](https://go.dev/doc/tutorial/compile-install), as with any other Go project.
 
-## 2. Initialize a project
-To initialize the current working directory as a new Wednesday project. Use the command 
+Otherwise you can take a look at the [latest release](https://github.com/DazFather/Wednesday/releases) available on github.
+
+Alternatively you can build it form source yourself run the provided installation script
 ```shell
-wed init
+git clone github.com/DazFather
+sh install.sh
+```
+
+
+## 2. Create a project
+To initialize a directory as a new Wednesday project. Use the command 
+```shell
+wed init <directory>
 ```
 > It will create all necessary files and directories, which you can customize later via the `wed-settings.json`.
+> If no directory is specified, current working directory will be used
 
 If you already have a settings file, you can initialize the project accordingly by passing the path to the file using the "settings" (or the alias "s") flag.
 > For example: `wed init -s=path/to/my-settings-file.json`
@@ -35,18 +44,18 @@ To verify everything is in place, simply serve it using `wed serve` and visit `h
 You can create a component by creating a file ending with `.wed.html` in any subdirectory of your project. In this file, you can specify the following top-level tags:
 
 ### `<style>`
-This will host your CSS styles scoped for this component only (`.my-component-name.wed-component`).
+This will host your CSS styles scoped for this component only (`.my-component-name.wed-component`). All `.wed-component` have a `display: content;`
 
 ### `<html>`
-Within the `<html>` tag, you can put the HTML structure of your component. This will be wrapped in a `<div class="my-component-name wed-component">` that will have a "display" of "contents".
-> WED relies on the [Go template engine](https://go.dev/pkg/text/template) for this, and the code will be executed only once, when the project is built. Both commands `wed build` and `wed serve` will build the project.
+Within the `<html>` tag, you can put the HTML structure of your component. This will be wrapped in a `<div class="my-component-name wed-component">`.
+> WED relies on the [Go template engine](https://go.dev/pkg/text/template). It will be executed only once, when the project is built. Both commands `wed build` and `wed serve` will build the project.
 > Thanks to this, the default WED component has zero extra runtime cost. Use them as much as you like; the client won't incur additional load.
 
 Let's see how to use them in some practical examples:
 
-#### Invoking a ~~component~~ template
+#### Invoking a component
 The first scenario where the template system is useful is when we want to use a component.
-To do this, we can simply use `{{ template "my-component-name" }}`, and the content of the HTML for the specified component will be inserted there.
+To do this, we can simply use `{{ use "my-component-name" }}`, and the content of the HTML for the specified component will be inserted there.
 
 #### Passing values between templates
 You can also pass a list of values between templates by using the provided `args` function. For example:
@@ -54,7 +63,7 @@ You can also pass a list of values between templates by using the provided `args
 <html>
     <h1>Concept Bucket</h1>
     <strong>List of ideas that came to my mind:</strong>
-    {{ template "bucket-list" args "pippo" 3.14 "banana" false }}
+    {{ use "child" props "pippo" 3.14 "banana" false }}
 </html>
 ```
 > `parent.wed.html`
@@ -62,15 +71,12 @@ You can also pass a list of values between templates by using the provided `args
 ```html
 <html>
     <p>
-        First thought: <mark>{{ index . 0 }}</mark><br>
-        Full list below:
+        First thought: <mark>{{ .Props.pippo . }}</mark><br>
+        Second: <em>{{ .Props.banana }}</em>
     </p>
-    <ul>
-        {{ range . }} <li>{{ . }}</li> {{ end }}
-    <ul>
 <html>
 ```
-> `bucket-list.wed.html`
+> `child.wed.html`
 
 #### Defining ~~snippets~~ inner templates
 Another useful feature from the templating language is the ability to define additional templates that can be used inside and outside your components.
@@ -99,12 +105,12 @@ Another useful feature from the templating language is the ability to define add
 
 #### Dynamic templates
 Sometimes web pages need to add components dynamically, such as when a user click on a button or after an HTTP call.
-Wednesday gots you cover, simply add the attribute "_type="dynamic"_" to the html tag
-> By default Wednesday will interpret an empty or missing "_type_" attribute as "_static_"
+Wednesday gots you cover, simply add the attribute `type="dynamic"` to the html tag
+> By default Wednesday will interpret an empty or missing _type_ attribute as _static_
 > This is a precise strategy to improve client speed and reduce state management to only when necessary
   
-In this way the html code will be wrapped again on a [template tag](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) having as the only attribute an "_id_" with the component name as the value such as `<template id="pippo">...</template>`.
-This template can be insert anywhere just by using `{{ importDynamic "component-name" }}`
+In this way the html code will be wrapped again on a [template tag](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) having as the only attribute an _id_ with the component name as the value such as `<template id="pippo">...</template>`.
+This template can be insert anywhere just by using `{{ dynamic "component-name" }}`
 > In praticular this template call accepts a variadic number of template names.
 > It's possible to pass only the needed template_s_ or nothing to import them all
 
@@ -243,13 +249,17 @@ Retrieves a template by it's id and provides methods to facilitate content inser
 ```
 > `app.wed.html`
 
+
+---
+
+
 ## 4. Building a webpage
 With your project set up, you're ready to build your site. Wednesday compiles your components, scripts, and styles into a static, deployable format.
 Use the following command to compile your project:
 ```shell
 wed build
 ```
-> This command processes all `.wed.html` components recursively from the specified directory (or current directory if none is given).
+> This command processes all `.wed.html` components and `.tmpl` pages recursively inside the input directoy.
 
 The command will output on terminal the relative path to the directory containing the "index.html"
 You can now open this file with your browser and everything should be working! No server needed _(well unless you actually do needed it)_
@@ -261,24 +271,18 @@ Arrange your components files however suits your needs. As stated previously the
 For the assets, you can put them wherever you want on the _HomeDir_ specified in your settings file. Again the choice is yours
 
 ### Handle directories and settings
-If your project is on another directory you can specify the mount directory as a second arguments
-> Example: `wed build path/to/my/project`
-
-But what if you want to edit the way your build is generated you can customize it using the JSON settings file:
-- **HomeTempl**: Define the file path of the home template (default: `home.tmpl`) 
-- **HomeDir**: Define the output directory where the project will be built _and eventually served_ (default: `build`)
-- **ScriptDir**: Define the subdirectory (inside _HomeDir_) for the JavaScript files of your components (default: `scripts`)
-- **StyleDir**: Define the subdirectory (inside _HomeDir_) for the CSS files of your components. (default: `styles`)
+But what if you want to edit the way your build is generated or specify the input directory, you can customize them using the JSON settings file:
+- **input_dir**: Define the finput directoy for all wed compoents and templates (default: _current working directoy_) 
+- **output_dir**: Define the output directory where the project will be built _and eventually served_ (default: `build`)
 
 You can also specify the settings file (default is `wed-settings.json`) using the "**settings**" (or "s") flag
 > Example: `wed build --settings=path/to/my/settings.json`
 > 
 > Flag must be prefixed by one or two '-' and value can be included in '"'
 
-### Adding external resources
-Inside the settings there is also the "**Styles**" and "**Scripts**" properties. Unlike the previous properties, these two are lists.
-You can add there multiple urls or paths for external resources.
-> **Be aware**: Those and other properties are used by the home template. You can change it at your own risk 
+
+---
+
 
 ## 5. Serving a site
 As stated previously there is no need for a server. The site should be accessible simply by opening the index.html from the browser.
@@ -299,58 +303,64 @@ Only for these reasons:
 ```shell
 wed serve
 ```
-> The command will build the site and then serve the _HomeDir_ statically
+> The command will build the site and then serve the ___output_dir___ statically
 
 This command accepts the "settings" flags and the optional second argument "mount" like `wed build`, plus:
 - "**port**" flag (or "p") to specify the port you want to serve your site on (default: `:8080`)
    > Example: `wed serve --port=":8081"`
-- "**live**" flag (or "l") to rebuild the application each specified time interval
+- "**live**" flag (or "l") to rebuild the application each specified time interval or no option for change detection on files
    > Example: `wed serve -live=3s`
+
+
+---
+
 
 ## 6. Pipeline Integration
 Wednesday can also help with CI/CD pipelines when a project grows on size thanks to some settings property
 
+
 ### Declaring Custom Data
-You can declare custom data in the "Var" property of your settings file.
-This data can be accessed within your components HTML, allowing for dynamic content generation. Example:
+
+You can define custom data in your project settings file using the `vars` key.
+These values are injected into your templates and can be accessed via the `{{ var <name> }}` syntax.
+Example
 
 ```json
 {
-  // ...
-  "Var": {
-    "site": {"Name": "My Awesome Site"},
-    "version": 1
+  "vars": {
+    "title": "My Portfolio",
+    "author": "Jane Doe",
+    "year": 2025
   }
 }
 ```
-> `wed-settings.json`
 
-In your HTML templates, you can use these variables like this:
+Usage example in a component
 
 ```html
-<html>
-    <h1>Welcome to {{ .Var.site.Name }}</h1>
-    <p>Version: {{ .Var.version }}</p>
-</html>
+<h1>{{ var "title" }}</h1>
+<p>Created by {{ var "author" }} - {{ var "year" }}</p>
 ```
-> `welcome.wed.html`
 
 
 ### Using `wed run`
-The `wed run` command allows you to automate workflow steps by executing a list of commands specified in the "Run" property of your settings file.
-The property value must be an array that lists each command to be executed by `wed run` in order. Example:
+The `wed run` command allows you to automate workflow steps by executing a list of commands specified in the `commands` property of your settings file.
+The property value must be an array that lists each command to be executed in order. Example:
 
 ```json
 {
   // ...
-  "Commands": {
+  "commands": {
     "zip": [
-      "git stash",
-      "git pull",
       "wed build",
       "zip -r build.zip ./build"
     ],
-    
+    "serve-stable": [
+      "git stash",
+      "git checkout master",
+      "git pull",
+      "wed serve -p :4200",
+    ]
   }
 }
 ```
@@ -362,3 +372,5 @@ wed run <command>
 > Example: `wed run zip`
 
 This setup lets you automate and customize your project’s workflows with ease.
+
+

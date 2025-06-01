@@ -1,0 +1,103 @@
+.TH WED 1 "June 2025" "Wednesday CLI" "User Commands"
+.SH NAME
+wed \- static site builder and component manager for the Wednesday framework
+.SH SYNOPSIS
+.B wed
+[\fIcommand\fR] [\fIoptions\fR]
+.SH DESCRIPTION
+\fBWednesday\fR is a static site generator and component manager. It allows you to build projects, use shared components from trusted libraries, and serve them locally.
+
+.SH COMMANDS
+.TP
+.B build
+Compile the project into a static site. Treats all \fI.wed.html\fR as components and \fI.tmpl\fR as pages.
+
+.TP
+.B init [directory]
+Create a default project in the specified directory. If not provided, the current directory is used.
+
+.TP
+.B serve
+Build and serve the project statically via HTTP.
+.TP
+.B Options:
+.TP
+\fB\-l\fR, \fB\-\-live\fR
+Enable automatic rebuilding on changes or at specified interval.
+.TP
+\fB\-p\fR, \fB\-\-port\fR
+Specify server port (default \fI:8080\fR).
+
+.TP
+.B run <command>
+Execute a user-defined pipeline of shell commands, as defined in the project settings.
+
+.TP
+.B lib <subcommand>
+Manage and interact with external libraries.
+
+.SH LIBRARY SUBCOMMANDS
+.TP
+.B search [pattern]
+Search for components in trusted libraries.
+.TP
+\fB\-i\fR
+Enable case-insensitive matching.
+.TP
+\fB\-t\fR, \fB\-\-tags\fR
+Match against tags instead of names.
+
+.TP
+.B trust <url>
+Trust a library and download/copy its manifest.
+.TP
+\fB\-r\fR, \fB\-\-rename\fR
+Rename the trusted library.
+.TP
+\fB\-d\fR, \fB\-\-download\fR
+Download all components for offline use.
+
+.TP
+.B untrust <library>
+Remove the manifest of the specified library.
+
+.TP
+.B use <component>
+Use a component in the current project. You may prefix it with \fIlibrary/\fR to avoid ambiguity.
+
+.SH GLOBAL FLAGS
+.TP
+\fB\-s\fR, \fB\-\-settings\fR
+Specify the project settings file. Default is \fIwed-settings.json\fR.
+
+.TP
+\fB\-\-no-color\fR, \fB\-nc\fR
+Disable colored terminal output.
+
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Display detailed help.
+
+.TP
+\fB\-v\fR, \fB\-\-version\fR
+Show the current version.
+
+.SH FILES
+.TP
+.I wed-settings.json
+Default settings file for a project. If not present, sensible defaults are used.
+
+.SH ENVIRONMENT
+.TP
+.B COMSPEC
+Used to select shell on Windows systems.
+.TP
+.B SHELL
+Used to select shell on UNIX systems. Defaults to \fBsh\fR if not found.
+
+.SH AUTHOR
+Written by Davide Lavermicocca <dlavermicocca99.uni@gmail.com>.
+
+.SH SEE ALSO
+.BR go (1),
+.BR npm (1)
