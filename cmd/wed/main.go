@@ -10,6 +10,8 @@ import (
 	_ "embed"
 )
 
+var Version string = "pre-alpha"
+
 var (
 	//go:embed templates/index.tmpl
 	indexTemplate []byte
@@ -204,7 +206,7 @@ func main() {
 		helpFlags()
 		err = doHelp()
 	case "version", "v", "-v", "--v", "-version", "--version":
-		fmt.Println("1.0 pre-alpha")
+		fmt.Println(Version)
 	default:
 		err = fmt.Errorf("Unknown given command: %q\n Use 'help' for usage\n", command)
 	}

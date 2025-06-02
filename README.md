@@ -9,19 +9,40 @@
 - **No mixed client-server code**, no headaches.
 
 ## 1. Installation
-If you have go installed you can:
+
+### Stable release
+For a more stable release you can take a look at the [latest release](https://github.com/DazFather/Wednesday/releases) available on github.
+Just unzip it and run the installation script.
+ > If you have troubles running the script try to `chmod +x ./install.sh` before running it
+
+
+### Compile the source
+ > require [go](https://go.dev/) and [git](https://git-scm.com/) installed
+If you want to compile straight from the source is recommanded to install it by cloning the repo like so:
+```shell
+git clone https://github.com/DazFather/lxl.git
+cd Wednesday
+```
+Then simply run the related installation script depending on your os
+ > If you have troubles running the script try to `chmod +x ./scripts/<OS>-install.sh` before running it
+ - **Linux** `./scripts/linux-install.sh`
+ - **Windows** `.\scripts\windows-install.bat`
+ - **MacOS** `./scripts/darwin-install.sh`
+
+By running the script the go binary will be shrinked and have a more coherent `wed --version`.
+On top of that on _linux_ and _macOS_ there will also install the related [man](https://it.wikipedia.org/wiki/Man_(Unix)) pages for quick consultation
+
+
+### Quick install
+ > require [go](https://go.dev/) and [git](https://git-scm.com/) installed
+If you want to do it yoursef have go installed you can:
 ```shell
 go install github.com/DazFather/Wednesday/cmd/wed
 ```
 > For more info simply follow the official Go (mini) tutorial [here](https://go.dev/doc/tutorial/compile-install), as with any other Go project.
 
-Otherwise you can take a look at the [latest release](https://github.com/DazFather/Wednesday/releases) available on github.
 
-Alternatively you can build it form source yourself run the provided installation script
-```shell
-git clone github.com/DazFather
-sh install.sh
-```
+---
 
 
 ## 2. Create a project
@@ -39,6 +60,10 @@ If you already have a settings file, you can initialize the project accordingly 
 
 To verify everything is in place, simply serve it using `wed serve` and visit `http://localhost:8080`; you should see a welcome page.
 > You can specify the port using the "port" (or "p") flag. More on this later.
+
+
+---
+
 
 ## 3. Writing a component
 You can create a component by creating a file ending with `.wed.html` in any subdirectory of your project. In this file, you can specify the following top-level tags:

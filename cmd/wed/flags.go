@@ -21,14 +21,14 @@ type FileSettings struct {
 }
 
 type FlagSettings struct {
-	reload   *time.Duration
+	reload *time.Duration
+	FileSettings
 	port     string
 	name     string
 	tags     string
 	arg      string
 	download bool
 	quiet    bool
-	FileSettings
 }
 
 var settings FlagSettings

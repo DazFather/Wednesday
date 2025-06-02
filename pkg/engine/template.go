@@ -14,14 +14,14 @@ import (
 )
 
 type TemplateData struct {
+	funcs     template.FuncMap
+	collected *template.Template
 	Settings
+	dynamics    util.Smap[string, string]
 	StylePaths  []string
 	ScriptPaths []string
 	pages       []*template.Template
 	components  []Component
-	dynamics    util.Smap[string, string]
-	funcs       template.FuncMap
-	collected   *template.Template
 }
 
 func NewTemplateData(s Settings) *TemplateData {

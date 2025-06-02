@@ -13,11 +13,11 @@ import (
 )
 
 type ManifestItem struct {
+	dependency  map[string]ManifestItem
 	download    string
 	checksum    string
-	tags        []string
 	description string
-	dependency  map[string]ManifestItem
+	tags        []string
 }
 
 func (m ManifestItem) Download(outputDir, lib, name string) error {
