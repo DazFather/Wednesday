@@ -18,6 +18,7 @@ Just unzip it and run the installation script.
 
 ### Compile the source
  > require [go](https://go.dev/) and [git](https://git-scm.com/) installed
+
 If you want to compile straight from the source is recommanded to install it by cloning the repo like so:
 ```shell
 git clone https://github.com/DazFather/lxl.git
@@ -25,6 +26,7 @@ cd Wednesday
 ```
 Then simply run the related installation script depending on your os
  > If you have troubles running the script try to `chmod +x ./scripts/<OS>-install.sh` before running it
+
  - **Linux** `./scripts/linux-install.sh`
  - **Windows** `.\scripts\windows-install.bat`
  - **MacOS** `./scripts/darwin-install.sh`
@@ -35,7 +37,8 @@ On top of that on _linux_ and _macOS_ there will also install the related [man](
 
 ### Quick install
  > require [go](https://go.dev/) and [git](https://git-scm.com/) installed
-If you want to do it yoursef have go installed you can:
+
+If you want a quick way and don't care about man's manuals or chunky binary, just run:
 ```shell
 go install github.com/DazFather/Wednesday/cmd/wed
 ```
