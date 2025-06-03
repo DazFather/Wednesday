@@ -4,16 +4,12 @@
 		<title>Wednesday</title>
 		<meta charset="utf-8" />
 		<!-- Stylesheets -->
-		<link rel="stylesheet" href="style/wed-style.css" />
-		{{ range $url := .StylePaths }}
-		<link rel="stylesheet" href="{{ $url }}" />
-		{{ end }}
+		{!import{ styles }!}
 		<!-- Scripts -->
-		<script type="module" src="script/wed-utils.js"></script>
-		<script defer type="module" src="script/app.js"></script>
+		{!import{ scripts }!}
 	</head>
 	<body>
-		{{ dynamic }}
+		{!import{ dynamics }!}
 		{{ use "app" ( props "title" ( list "Wed" "nesday" ) ) }}
 	</body>
 </html>

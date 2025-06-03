@@ -24,8 +24,8 @@ var (
 )
 
 const (
-	defStyleName      = "wed-style.css"
-	defScriptName     = "wed-utils.js"
+	defStyleName      = "wed-style"
+	defScriptName     = "wed-utils"
 	indexTemplateName = "index.tmpl"
 	defAppName        = "app.wed.html"
 )

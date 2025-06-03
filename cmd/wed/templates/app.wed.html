@@ -44,14 +44,14 @@
 		<header>
 			<!-- Example of useDisplay -->
 			<h1 class="title">loading...</h1>
-			<strong>to <mark><{{ index .Props.title 0 }}</mark><{{ index .Props.title 1 }}</strong>
+			<!-- Example of component 'props' -->
+			<strong>to <mark>{{ index .Props.title 0 }}</mark>{{ index .Props.title 1 }}</strong>
 		</header>
 		<!-- Example of useBinds -->
 		<section class="card flex-center">
-			<strong
-				>Explore native
-				<mark bind="innerText:text">double bindings</mark></strong
-			>
+			<strong>Explore native
+				<mark bind="innerText:text">double bindings</mark>
+			</strong>
 			<input
 				type="text"
 				placeholder="Write something"

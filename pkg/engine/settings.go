@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"net/url"
 	"path/filepath"
 )
 
@@ -12,9 +13,25 @@ type Settings struct {
 }
 
 func (s Settings) StylePath(filename string) string {
-	return filepath.Join(s.OutputDir, "style", filename)
+	return filepath.Join(s.OutputDir, "style", filename+".css")
 }
 
 func (s Settings) ScriptPath(filename string) string {
-	return filepath.Join(s.OutputDir, "script", filename)
+	return filepath.Join(s.OutputDir, "script", filename+".js")
+}
+
+func (s *Settings) StyleURL(name string) string {
+	link, err := url.JoinPath("style", name+".css")
+	if err != nil {
+		panic(err)
+	}
+	return link
+}
+
+func (s *Settings) ScriptURL(name string) string {
+	link, err := url.JoinPath("script", name+".js")
+	if err != nil {
+		panic(err)
+	}
+	return link
 }
