@@ -164,7 +164,7 @@ func buildUsage() {
 Compile the project into a static site.
 If not by 'input_dir' the current working directory will be used as entrypoint
 and all subdirectory will be checked recursively.
-The program will treats all files with extention '.wed.html' as components and
+The program will treats all files with extension '.wed.html' as components and
 '.tmpl' as pages.
 
 `, gray.Paint(`Where do things go to:`), `
@@ -241,7 +241,7 @@ func libTrustUsage() {
         Usage`, magenta.Paint(" lib trust "), `command
 
 Trust a library and download it's manifest by following the provided link.
-If starts with 'http' then an HTTP GET request will be made to retreive the file.
+If starts with 'http' then an HTTP GET request will be made to retrieve the file.
 Or else it's assumed is a path to a local file and therefore it will be copied it
 
 `, gray.Paint(`Where do things go to:`), `
@@ -279,7 +279,7 @@ func libUntrustUsage() {
 	fmt.Println(`
         Usage`, magenta.Paint(" lib untrust "), `command
 
-Trusting a library is essentialy coping a manifest into wednesday config.
+Trusting a library is essentially coping a manifest into wednesday config.
 By untrusting it you remove that file therefore components provided will not be shown
 by 'lib search' or esaily available by 'lib use'
 In case a library has been named you must provide the same name.

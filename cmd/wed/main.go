@@ -10,7 +10,7 @@ import (
 	_ "embed"
 )
 
-var Version string = "pre-alpha"
+var Version string = "alpha"
 
 var (
 	//go:embed templates/index.tmpl
@@ -62,7 +62,7 @@ func doBuild() (err error) {
 		return fmt.Errorf("Failed to build site errors: %d", i)
 	}
 
-	printlnDone("build", "Site successfully built at:", settings.OutputDir)
+	printlnDone("build", "Site successfully built at", gray.Paint(settings.OutputDir))
 	return nil
 }
 
@@ -78,7 +78,7 @@ func doServe() error {
 		)
 	}
 
-	hint("Listening at: ", settings.port, "\nServing directory: ", settings.OutputDir, "\n")
+	hint("Listening at: ", gray.Paint(settings.port), "\nServing directory: ", gray.Paint(settings.OutputDir), "\n")
 	return http.ListenAndServe(
 		settings.port,
 		http.StripPrefix("/", http.FileServer(http.Dir("./"+settings.OutputDir))),
@@ -153,7 +153,7 @@ func doHelp() error {
 		case "use":
 			libUseUsage()
 		default:
-			return fmt.Errorf("Unknown given subcommand: %q\n Use 'help %s' for usage\n", settings.arg, settings.name)
+			return fmt.Errorf("unknown given subcommand: %q\n Use 'help %s' for usage\n", settings.arg, settings.name)
 		}
 	case "build":
 		buildUsage()
@@ -164,7 +164,7 @@ func doHelp() error {
 	case "run":
 		runUsage()
 	default:
-		return fmt.Errorf("Unknown given command: %q\n Use 'help' for usage\n", settings.name)
+		return fmt.Errorf("unknown given command: %q\n Use 'help' for usage\n", settings.name)
 	}
 
 	return nil
@@ -208,6 +208,6 @@ func main() {
 	case "version", "v", "-v", "--v", "-version", "--version":
 		fmt.Println(Version)
 	default:
-		err = fmt.Errorf("Unknown given command: %q\n Use 'help' for usage\n", command)
+		err = fmt.Errorf("unknown given command: %q\n Use 'help' for usage\n", command)
 	}
 }

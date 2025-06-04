@@ -187,7 +187,7 @@ func (p page) toDepencency(comp Component) (dep ComponentDependency, err error) 
 
 	for i, name := range comp.Imports {
 		if p.Lookup(name) == nil {
-			err = fmt.Errorf("on component '%s' trying to require at place %d non-existring component '%s'", comp.Name, i+1, name)
+			err = fmt.Errorf("on component '%s' trying to require at place %d non existing component '%s'", comp.Name, i+1, name)
 			return
 		}
 		for _, c := range *p.components {
