@@ -36,9 +36,9 @@ var (
 )
 
 var (
-	htmlRgx   = regexp.MustCompile(`(?s)<html(\s+type="\s*(\w+)\s*")?\s*>\s*(.*?)\s*</html>`)
+	htmlRgx   = regexp.MustCompile(`(?s)<html(\s+type="\s*(\w*?)\s*")?\s*>\s*(.*?)\s*</html>`)
 	styleRgx  = regexp.MustCompile(`(?s)<style\s*>\s*(.*?)\s*</style>`)
-	scriptRgx = regexp.MustCompile(`(?s)<script(\s+require="\s*(.+?)\s*")?\s*>\s*(.*?)\s*</script>`)
+	scriptRgx = regexp.MustCompile(`(?s)<script(\s+require="\s*(.*?)\s*")?\s*>\s*(.*?)\s*</script>`)
 )
 
 func NewComponent(name string, content []byte) (c Component, err error) {
