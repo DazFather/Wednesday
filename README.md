@@ -13,7 +13,11 @@
 ### Stable release
 For a more stable release you can take a look at the [latest release](https://github.com/DazFather/Wednesday/releases) available on github.
 Just unzip it and run the installation script.
- > If you have troubles running the script try to `chmod +x ./install.sh` before running it
+ > If you have troubles running the script try to `chmod +x ./<filename>` before running it
+
+Or to automate it:
+ - **Windows**: `curl -sSL https://raw.githubusercontent.com/DazFather/Wednesday/main/install.bat | cmd`
+ - **UNIX** (Linux, MacOS): `curl -sSfL https://raw.githubusercontent.com/DazFather/Wednesday/main/scripts/install.sh | sh`
 
 
 ### Compile the source
@@ -25,14 +29,14 @@ git clone https://github.com/DazFather/lxl.git
 cd Wednesday
 ```
 Then simply run the related installation script depending on your os
- > If you have troubles running the script try to `chmod +x ./scripts/<OS>-install.sh` before running it
+ > If you have troubles running the script try to `chmod +x ./scripts/<OS>-compile-install.sh` before running it
 
- - **Linux** `./scripts/linux-install.sh`
- - **Windows** `.\scripts\windows-install.bat`
- - **MacOS** `./scripts/darwin-install.sh`
+ - **Linux** `./scripts/linux-compile-install.sh`
+ - **Windows** `.\scripts\windows-compile-install.bat`
+ - **MacOS** `./scripts/darwin-compile-install.sh`
 
 By running the script the go binary will be shrinked and have a more coherent `wed --version`.
-On top of that on _linux_ and _macOS_ there will also install the related [man](https://it.wikipedia.org/wiki/Man_(Unix)) pages for quick consultation
+On top of that on _Linux_ and _MacOS_ there will also install the related [man](https://it.wikipedia.org/wiki/Man_(Unix)) pages for quick consultation
 
 
 ### Quick install

@@ -53,6 +53,27 @@ jobs:
             gzip -9 -c "$f" > ${MANUALS_DIR}/$(basename "$f").gz
           done
 
+      - name: Checksum and sign
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Create checksums for all wed binaries
+          find dist -type f -name "wed*" -exec sha256sum {} + > SHA256SUMS
+
+          # Import GPG private key
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+          # Trust the imported key (optional but helpful for some setups)
+          KEY_ID=$(gpg --list-keys --with-colons | awk -F: '/^pub/ { print $5; exit }')
+          echo -e "trust\n5\ny\n" | gpg --command-fd 0 --expert --edit-key "$KEY_ID"
+
+          # Sign the SHA256SUMS file
+          gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --pinentry-mode loopback --armor --detach-sign SHA256SUMS
+          
+          # Verify the signature (for debugging)
+          gpg --verify SHA256SUMS.asc SHA256SUMS
+
       - name: Bundle releases
         run: |
           INSTALL_SCRIPT="scripts/${{ matrix.goos }}-artifact-install"
@@ -66,11 +87,13 @@ jobs:
           fi
 
       - name: Upload release assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*.zip
             dist/*.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            SHA256SUMS
+            SHA256SUMS.asc
 
