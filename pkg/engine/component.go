@@ -17,6 +17,17 @@ type Component struct {
 	Type    ComponentType
 }
 
+func (c Component) String() string {
+	s := "{"
+	if c.Script != "" {
+		s += "js"
+	}
+	if c.Style != "" {
+		s += "css"
+	}
+	return fmt.Sprint("c<", c.Type, ">", c.Name, c.Imports, s, "}")
+}
+
 func (c Component) Identifier() string {
 	return c.Name
 }

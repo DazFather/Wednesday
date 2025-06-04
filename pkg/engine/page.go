@@ -67,6 +67,7 @@ func (p *page) Execute(w io.Writer, data any) error {
 
 	for dep := range util.Inverse(p.deps) {
 		c := dep.Data
+
 		if c.Script != "" {
 			scripts = append(scripts, p.ScriptURL(c.Name))
 		}
@@ -76,7 +77,6 @@ func (p *page) Execute(w io.Writer, data any) error {
 		if c.Type != static {
 			dynamics = append(dynamics, c.Name)
 		}
-		break
 	}
 
 	// Run second template engine to apply imports
