@@ -64,6 +64,7 @@ func (p *page) Execute(w io.Writer, data any) error {
 	if names := util.HasCircularDep(p.deps); len(names) > 0 {
 		return fmt.Errorf("detected circular dependency in: %s", strings.Join(names, ", "))
 	}
+
 	for dep := range util.Inverse(p.deps) {
 		c := dep.Data
 		if c.Script != "" {
@@ -88,16 +89,16 @@ func (p *page) Execute(w io.Writer, data any) error {
 			return template.HTML(s.String())
 		},
 		"styles": func() template.HTML {
-			s := `<link rel="stylesheet" href="style/wed-style.css" />`
+			s := `<link rel="stylesheet" href="` + p.StyleURL("wed-style") + `" />`
 			for _, style := range styles {
 				s += `<link rel="stylesheet" href="` + style + `"/>`
 			}
 			return template.HTML(s)
 		},
 		"scripts": func() template.HTML {
-			s := `<script type="module" src="script/wed-utils.js"></script>`
+			s := `<script type="` + string(p.Module) + `" src="` + p.ScriptURL("wed-utils") + `"></script>`
 			for _, script := range scripts {
-				s += `<script defer type="module" src="` + script + `"></script>`
+				s += `<script defer type="` + string(p.Module) + `" src="` + script + `"></script>`
 			}
 			return template.HTML(s)
 		},
@@ -167,23 +168,34 @@ func (p *page) use(name string, opt ...ComponentInfo) (template.HTML, error) {
 
 	for _, c := range *p.components {
 		if c.Name == name {
-			p.deps = append(p.deps, p.toDepencency(c))
+			dep, err := p.toDepencency(c)
+			if err != nil {
+				return "", err
+			}
+			p.deps = append(p.deps, dep)
+			break
 		}
 	}
 
 	return template.HTML(str.String()), nil
-
 }
 
-func (p page) toDepencency(comp Component) (dep ComponentDependency) {
+func (p page) toDepencency(comp Component) (dep ComponentDependency, err error) {
 	dep.Data = comp
 	//dep.Imports = []ComponentDependency{{Data: comp, Imports: nil}}
 	dep.Imports = make([]ComponentDependency, len(comp.Imports))
 
 	for i, name := range comp.Imports {
+		if p.Lookup(name) == nil {
+			err = fmt.Errorf("on component '%s' trying to require at place %d non-existring component '%s'", comp.Name, i+1, name)
+			return
+		}
 		for _, c := range *p.components {
 			if c.Name == name {
-				dep.Imports[i] = p.toDepencency(c)
+				if dep.Imports[i], err = p.toDepencency(c); err != nil {
+					return
+				}
+				break
 			}
 		}
 	}

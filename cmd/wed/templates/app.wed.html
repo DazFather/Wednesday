@@ -61,7 +61,10 @@
 	</div>
 </html>
 <script>
-	import { useDisplay, useBinds } from './wed-utils.js';
+	// By default good-old text/javascript is being used where all is public
+	// you can put the require attribute to the script to specify the name of the
+	// component you need or change the settings to "module": "ecma" to use:
+	//import { useDisplay, useBinds } from './wed-utils.js';
 
 	// Example of useDisplay
 	const show = useDisplay(".title", (text) => text + " !");

@@ -33,7 +33,7 @@ const (
 func doInit() (err error) {
 	m := map[string][]byte{
 		settings.StylePath(defStyleName):                    defStyleContent,
-		settings.ScriptPath(defScriptName):                  defScriptContent,
+		settings.ScriptPath(defScriptName):                  defaultScript(),
 		filepath.Join(settings.InputDir, indexTemplateName): indexTemplate,
 	}
 

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -145,4 +147,17 @@ func liveReload(success func(), fail func(string)) error {
 		return watch(settings.InputDir, settings.OutputDir, fn)
 	}
 	return each(*settings.reload, fn)
+}
+
+func defaultScript() []byte {
+	var buf = bytes.NewBuffer([]byte{})
+	t, err := template.New(defScriptName).Delims("{!default{", "}!}").Parse(string(defScriptContent))
+	if err != nil {
+		panic(err)
+	}
+
+	if err = t.Execute(buf, settings); err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
 }

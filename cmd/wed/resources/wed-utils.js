@@ -161,5 +161,6 @@ function useEffect(start, onChange) {
 	};
 }
 
+{!default{ if eq "module" .Module }!}
 export { select, useMirror, useDisplay, useTemplate, useBinds, useEffect }
-
+{!default{ end }!}
