@@ -16,7 +16,7 @@ Just unzip it and run the installation script.
  > If you have troubles running the script try to `chmod +x ./<filename>` before running it
 
 Or to automate it:
- - **Windows**: `curl -sSL https://raw.githubusercontent.com/DazFather/Wednesday/main/install.bat | cmd`
+ - **Windows**: `curl -sSL https://raw.githubusercontent.com/DazFather/Wednesday/main/scripts/install.bat | cmd`
  - **UNIX** (Linux, MacOS): `curl -sSfL https://raw.githubusercontent.com/DazFather/Wednesday/main/scripts/install.sh | sh`
 
 
