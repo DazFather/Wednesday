@@ -58,21 +58,21 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          # Create checksums for all wed binaries
+          # Create checksums
           find dist -type f -name "wed*" -exec sha256sum {} + > SHA256SUMS
 
           # Import GPG private key
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
 
-          # Trust the imported key (optional but helpful for some setups)
-          KEY_ID=$(gpg --list-keys --with-colons | awk -F: '/^pub/ { print $5; exit }')
-          echo -e "trust\n5\ny\n" | gpg --command-fd 0 --expert --edit-key "$KEY_ID"
+          # Sign the checksums
+          gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+              --pinentry-mode loopback \
+              --armor --output SHA256SUMS.asc \
+              --detach-sign SHA256SUMS
 
-          # Sign the SHA256SUMS file
-          gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --pinentry-mode loopback --armor --detach-sign SHA256SUMS
-          
-          # Verify the signature (for debugging)
+          # Optional: verify signature
           gpg --verify SHA256SUMS.asc SHA256SUMS
+
 
       - name: Bundle releases
         run: |
