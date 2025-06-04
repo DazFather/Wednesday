@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html/template"
 	"os"
@@ -123,30 +124,41 @@ func build() chan error {
 	return engine.Build(settings.FileSettings.Settings)
 }
 
-func liveReload(success func(), fail func(string)) error {
+func liveReload() chan error {
 	errch, prev := make(chan error), ""
-	defer close(errch)
 
-	var fn = func() error {
-		serr := ""
+	var reload = func() error {
+		var (
+			errs error
+			serr string
+		)
 		for err := range build() {
-			serr += fmt.Sprintln(err)
+			errs = errors.Join(errs, err)
+		}
+
+		if errs != nil {
+			serr = errs.Error()
 		}
 		if serr != prev {
-			if serr == "" {
-				success()
-			} else {
-				fail(serr)
-			}
+			errch <- errs
 			prev = serr
 		}
 		return nil
 	}
 
-	if *settings.reload == 0 {
-		return watch(settings.InputDir, settings.OutputDir, fn)
-	}
-	return each(*settings.reload, fn)
+	go func() {
+		defer close(errch)
+
+		if *settings.reload == 0 {
+			if err := watch(settings.InputDir, settings.OutputDir, reload); err != nil {
+				errch <- fmt.Errorf("Live server stopped working cause %w", err)
+			}
+		} else if err := each(*settings.reload, reload); err != nil {
+			errch <- fmt.Errorf("Live server stopped working cause %w", err)
+		}
+	}()
+
+	return errch
 }
 
 func defaultScript() []byte {

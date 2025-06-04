@@ -72,10 +72,15 @@ func doServe() error {
 	}
 
 	if settings.reload != nil {
-		go liveReload(
-			func() { printlnDone("build", "Site successfully rebuilt, no error found\n") },
-			func(serr string) { printlnFailed("build", "Cannot rebuild site fond:\n", serr) },
-		)
+		go func() {
+			for err := range liveReload() {
+				if err == nil {
+					printlnDone("build", "Site successfully rebuilt, no error found\n")
+				} else {
+					printlnFailed("build", "Cannot rebuild site fond:\n", err)
+				}
+			}
+		}()
 	}
 
 	hint("Listening at: ", gray.Paint(settings.port), "\nServing directory: ", gray.Paint(settings.OutputDir), "\n")
