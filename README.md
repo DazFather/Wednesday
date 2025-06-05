@@ -16,8 +16,9 @@ Just unzip it and run the installation script.
  > If you have troubles running the script try to `chmod +x ./<filename>` before running it
 
 Or to automate it:
- - **Windows**: `curl -sSL https://raw.githubusercontent.com/DazFather/Wednesday/main/install.bat | cmd`
  - **UNIX** (Linux, MacOS): `curl -sSfL https://raw.githubusercontent.com/DazFather/Wednesday/main/scripts/install.sh | sh`
+ - **Windows**: via PowerShell `Invoke-RestMethod https://raw.githubusercontent.com/DazFather/Wednesday/main/install.ps1 | Invoke-Expression`
+ > If you encouner problems running the script try to `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` before running it
 
 
 ### Compile the source
