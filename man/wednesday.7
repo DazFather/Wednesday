@@ -2,70 +2,74 @@
 .SH NAME
 wednesday \- component-based framework for site generation
 .SH DESCRIPTION
-Wednesday is a front-end web framework that aims to stay close to the browser while still providing developer experience and quality-of-life features.
+Wednesday is a front-end web framework that aims to stay close to the browser while still providing a solid developer experience and quality-of-life features.
+
 
 .SH PHILOSOPHY AND DESIGN
 The philosophy of Wednesday can be summarized as follows:
 
 .SS Close to the browser
 More specifically, the approach we follow is to reject unnecessary complexity and abstraction.
-The experience of writing a component should feel as close as possible to writing simple HTML, CSS, and JavaScript.
+The experience of writing a component should feel as close as possible to writing plain HTML, CSS, and JavaScript.
 
-\fII No extra overheads, no strange or complicated behavior hidden behind the framework that you now need to learn, understand, and debug.\fR
+\fI No extra overhead, no strange or complicated behavior hidden behind the framework that you now need to learn, understand, and debug.\fR
 
-If you need to look something up, it will likely be found in the MDN or Go `html/template` documentation.
+If you need to look something up, it will likely be found in the MDN or Go \fIhtml/template\fR documentation.
 For the same reason, the building blocks of Wednesday are few and flexible. Once you learn them, the framework should feel "transparent."
 
 .SS Atomic and reusable
 Atomicity is a core principle in Wednesday. It applies to how components are structured, how pages are built, and how libraries are handled.
 
-\fII Components are essentially UI fragments and should encapsulate everything they need to function, batteries included.\fR
+\fI Components are essentially UI fragments and should encapsulate everything they need to function—batteries included.\fR
 
-\fII Pages using components should be independently accessible.\fR
+\fI Pages using components should be independently accessible.\fR
 
-\fII A library should include its own dependencies.\fR
+\fI A library should include its own dependencies.\fR
 
-\fII The build output should reside in a self-contained directory.\fR
+\fI The build output should reside in a self-contained directory.\fR
 
 All of this contributes to predictability and reusability.
 
 .SS Do it your way
-In Wednesday, a \fIproject\fR is simply a directory in which everything takes place.
+In Wednesday, a \fIproject\fR is simply a directory where everything takes place.
 The framework identifies \fIcomponents\fR and \fIpages\fR by file extension, regardless of how deeply nested they are.
 
-\fII Feel free to structure your project however you want.\fR
+\fI Feel free to structure your project however you want.\fR
 
-Combined with the JSON-based project settings and the wed run commands pipeline, this makes your project more flexible and better suited to your style and workflow.
+Combined with the JSON-based project settings and the `wed run` command pipeline, this makes your project more flexible and better suited to your style and workflow.
 
 .SS Small to medium
-There are many front-end web frameworks out there. Perhaps too many. Wednesday does not aim to compete with them.
+There are many front-end web frameworks out there, perhaps too many. Wednesday does not aim to compete with them.
 We believe that many frameworks focus on large-scale or enterprise projects. Wednesday goes in the opposite direction:
 
-\fII All projects should start small and simple and evolve over time.\fR
+\fI All projects should start small and simple and evolve over time.\fR
 
 Premature optimization is the root of most evils.
 
+
 .SH COMPONENT STRUCTURE
-A component should represent an atomic piece of UI.
-THey are essentialy files with `.wed.html` extention and can be placed anywhere within the project.
-Ech component is divided into:
+A component represents an atomic piece of UI.
+They are essentially files with the `.wed.html` extension and can be placed anywhere within the project.
+Each component is divided into:
 
 .SS html \fI(required)\fR
 A pseudo-HTML tag that wraps the actual HTML content of the component.
-The content of the tag will be enhanced using Go template engine (more of this later).
+The content of the tag is enhanced using the Go template engine (more of this later).
 
 Optionally, it accepts a \fBtype\fR attribute with one of the following values:
 
 .TP
-.BI static \ (default)
-Indicates the component can only be created at build time via the template engine.
+.B static (default)
+Indicates the component is rendered at build time via the template engine.
 The HTML content is wrapped in a `<div>` with the classes `wed-component` and `<componentname>-component`.
 
 .TP
 .B dynamic
-Indicates the component is available only at runtime and is rendered via a `<template>` tag with `id="<componentname>-component"`, typically injected at the top of the body.
-\fI Usually, functions like \fBuseTemplate\fP should be defined in the script section of the dynamic component and imported where needed.\fR
-The content is still wrapped in the same `<div>` as in static mode, ensuring styles and scripts work properly.
+Indicates the component is rendered only at runtime, using a `<template>` tag with `id=\(dq<componentname>-component\(dq`, typically injected at the top of the body.
+
+\fIUsually, functions like \fBuseTemplate\fP should be defined in the script section of the dynamic component and imported where needed.\fR
+
+The content is still wrapped in the same `<div>` as in static mode to ensure styles and scripts work properly.
 
 .TP
 .B hybrid
@@ -75,11 +79,12 @@ Makes the component available both statically and dynamically.
 A pseudo-HTML tag containing the JavaScript logic for the component.
 If non-empty, a `.js` file with the same name is generated.
 
-Scripts are typically imported in the page head and evaluated later via the \fIdefer\fR attribute.
+Scripts are typically imported in the page head and evaluated later using the \fIdefer\fR attribute.
 
-It also supports a \fBrequire\fR attribute listing component names that must be evaluated first—useful for dependency order.
+It also supports a \fBrequire\fR attribute listing component names that must be evaluated first.
+This is useful for controlling dependency order.
 
-By default, scripts use \fItext/javascript\fR, but switching to \fI"module": "ecma"\fR in the project settings enables ES module support, letting users handle imports manually.
+By default, scripts use \fItext/javascript\fR, but switching to \fI\(dqmodule\(dq: \(dqecma\(dq\fR in the project settings enables ES module support, allowing you to handle imports manually.
 
 .SS style \fI(optional)\fR
 A pseudo-HTML tag containing styles scoped to the component.
@@ -88,33 +93,33 @@ Wednesday automatically wraps all CSS rules in a selector like `.<componentname>
 If non-empty, a `.css` file is generated with the same name as the component.
 All styles are imported in the page head by default.
 
+
 .SH TEMPLATE ENGINE
-As mentioned before Wednesday uses Go `html/template` engine and extends it with the following functions:
+As mentioned earlier, Wednesday uses Go’s `html/template` engine and extends it with the following functions:
 
 .TP
-.B use "<component>"
-Renders the HTML content of `<component>.wed.html` component.
-It also allows wed to check and add dependency used inside the page 
+.B use \(dq<component>\(dq
+Renders the HTML content of the `<component>.wed.html` file.
+This also registers any dependencies used inside the component.
 
 .TP
-.B props "<key>" <value> "<key2>" <value2>
+.B props \(dq<key>\(dq <value> \(dq<key2>\(dq <value2>
 Used in a pipeline to pass data:
 .EX
 {{ use "contacts" props
-	"DazFather" "+39 1234567"
-	"NicoNex" "+39 987654"
+  "DazFather" "+39 1234567"
+  "NicoNex" "+39 987654"
 }}
 .EE
 Values can be accessed inside the \fIcomponent\fR with:
 .B{{ .Props.<key> }}
 .EX
-<li><em>mentor:<em> <span>{{ .Props.NicoNex   }}</span></li>
-<li><em>mentee:<em> <span>{{ .Props.DazFather }}</span></li>
+<li><em>mentor:</em> <span>{{ .Props.NicoNex   }}</span></li>
+<li><em>mentee:</em> <span>{{ .Props.DazFather }}</span></li>
 .EE
 
-
 .TP
-.B hold "<child-component>" "<child-component2>"
+.B hold \(dq<child-component>\(dq \(dq<child-component2>\(dq
 Registers one or more components for later injection using `drop`:
 .EX
 {{ use "modal" hold "confirm-btn" "reject-btn" }}
@@ -122,7 +127,7 @@ Registers one or more components for later injection using `drop`:
 
 .TP
 .B drop
-Injects components registered earlier via `hold`.
+Injects components previously registered with `hold`.
 
 .TP
 .B list <value> <value2> <value3>
@@ -134,47 +139,72 @@ Creates a slice of values:
 .EE
 
 .TP
-.B var <key>
+.B var \(dq<key>\(dq
 Accesses a variable declared in the project settings:
 .EX
 {{ var "site-email" }}
 .EE
 
+
+.SH TEMPLATE PAGES
+Wednesday supports full template pages with the \fI.tmpl\fR extension.
+These files are processed by the template engine at build time and serve as the main entry points of the website.
+Each template is transformed into a complete HTML page with the same base name.
+
+As with components, template pages can be placed anywhere within the input directory and use the same template engine.
+However, they support additional syntax to manage resource imports more explicitly:
+
+.TP
+.B {!import{ \(dqdynamics\(dq }!}
+Generates import tags for dynamic components.
+Typically used as the first item inside the \fI<body>\fR tag.
+
+.TP
+.B {!import{ \(dqstyles\(dq }!}
+Generates import tags for all component-specific styles.
+Usually placed inside the \fI<head>\fR tag.
+
+.TP
+.B {!import{ \(dqscripts\(dq }!}
+Generates import tags for all component scripts.
+Also usually placed inside the \fI<head>\fR tag.
+
+
 .SH PROJECT CONFIGURATION
-The project JSON-settings file.
-Is not required and by default Wednesday expect it as \fIwed-settings.json\fR directly in the project directory.
-Optionally can be specified via the \fI--settings\fR flag to place it somewhere else, in this case the flag must be passed to each wed commands.
+The project JSON settings file is optional. By default, Wednesday looks for \fIwed-settings.json\fR in the project root.
+Alternatively, a different file can be specified via the \fI--settings\fR flag, which must then be passed to all `wed` commands.
+
 Supported fields include:
 
 .TP
 .B vars
-A key-value map of build-time variables, available via the template engine via \fB{{ var "key" }}\fR
+A key-value map of build-time variables, available via the template engine using \fB{{ var \(dqkey\(dq }}\fR.
 
 .TP
 .B commands
-A map to pipeline (pineline name to shell commands) that can be run using \fBwed run <pipeline-name>\fR
+A map from pipeline names to shell commands, which can be run using \fBwed run <pipeline-name>\fR.
 
 .TP
 .B output_dir
-Directory where the compiled site will be placed
+The directory where the compiled site will be placed.
 
 .TP
 .B input_dir
-Directory where wed will search for components and pages
+The directory where Wednesday will search for components and pages.
 
 .TP
 .B module
-Defines the JavaScript module type for importing script on pages:
+Defines the JavaScript module type for importing scripts on pages:
 .RS
 
-.BI text/javascript (default)
-Uses the \fIrequire\fR attribute for dependency management  
+.B text/javascript (default)
+Uses the \fIrequire\fR attribute for dependency management.
 
-.BI `ecma`
-Or alias \fImodule\fR, enables ECMAScript modules support.
-User will be required to manage dependency via ECMAScript imports
+.B ecma
+Or alias \fImodule\fR — enables ECMAScript module support.
+The user is responsible for managing dependencies via ES module imports.
 .RE
 
 .SH SEE ALSO
-wed(1)
+.BR wed (1)
 
