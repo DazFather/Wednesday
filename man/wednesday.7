@@ -170,6 +170,87 @@ Generates import tags for all component scripts.
 Also usually placed inside the \fI<head>\fR tag.
 
 
+.SH WED UTILITIES
+All Wednesday pages automatically import the \fIwed-utils.js\fR script, which provides a set of DOM utility functions designed to simplify template-driven interactivity.
+These utilities include helpers for managing state, reacting to changes, binding values, and handling templates.
+
+
+.SS useDisplay(\fItarget\fR, \fImutate?\fR)
+Creates a function that updates the \fIinnerText\fR of a DOM element.
+The target can be a CSS selector or a DOM element.
+An optional \fImutate\fR function may be passed to transform the value before display.
+
+Here a small example:
+
+.EX
+const show = useDisplay(".output", t => "Hello " + t)
+show("World") // => updates .output with "Hello World"
+.EE
+
+
+.SS useEffect(\fIvalue\fR, \fIonChange\fR)
+Creates a reactive object with a \fIvalue\fR property.
+When \fIvalue\fR changes, the provided callback is executed with the new and old values.
+Often used to reactively update DOM when state changes.
+
+Here a small example:
+
+.EX
+const count = useEffect(0, newVal => console.log("Updated:", newVal))
+count.value = 42 // triggers the effect
+.EE
+
+
+.SS useMirror(\fItarget\fR, \fIprops\fR, \fImutate?\fR)
+Returns an object mirroring one or more properties of a DOM element, allowing direct controlled access (read/write).
+Helps prevent unintended side effects in large codebases.
+
+Here a small example:
+
+.EX
+const mirror = useMirror("input", ["value", "disabled"])
+mirror.value = "Test"
+mirror.disabled = true
+.EE
+
+
+.SS useBinds(\fItarget\fR, \fImutate?\fR)
+Establishes two-way bindings between DOM elements and an object.
+Elements must have a \fBbind\fR attribute using the format:
+.RS
+\fBproperty\fR[:\fBname\fR[:\fBevent\fR]]
+.RE
+Multiple bindings can be separated by spaces.
+
+Here a small example:
+
+.EX
+<html>
+  <h1>Welcome <span bind="innerText:user">new user</span>!</h1>
+  <input bind="value:user:input">
+</html>
+<script>
+  const form = useBinds("form")
+  form.user = "Alice"
+</script>
+.EE
+
+
+.SS useTemplate(\fItemplateID\fR, \fIinit?\fR)
+Retrieves a \fB<template>\fR by its DOM ID and returns an object with helper methods for inserting or cloning it into the DOM.
+The optional \fIinit\fR callback can customize each clone before insertion.
+
+Here a small example:
+
+.EX
+const { clone } = useTemplate("todo-item", node => {
+  node._binds = useBinds(node)
+  return node
+})
+document.body.appendChild(clone())
+.EE
+
+
 .SH PROJECT CONFIGURATION
 The project JSON settings file is optional. By default, Wednesday looks for \fIwed-settings.json\fR in the project root.
 Alternatively, a different file can be specified via the \fI--settings\fR flag, which must then be passed to all `wed` commands.
