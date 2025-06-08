@@ -71,7 +71,7 @@ func (p *page) Execute(w io.Writer, data any) error {
 		if c.Script != "" {
 			scripts = append(scripts, p.ScriptURL(c.Name))
 		}
-		if c.Style != "" {
+		if c.Style != "" && p.Module != "module" {
 			styles = append(styles, p.StyleURL(c.Name))
 		}
 		if c.Type != static {
