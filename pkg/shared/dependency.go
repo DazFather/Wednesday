@@ -100,12 +100,13 @@ func HasCircularDep[S comparable, T Identifiable[S]](deps []Dependency[S, T]) []
 	return arr
 }
 
-func Inverse[S comparable, T Identifiable[S]](deps []Dependency[S, T]) iter.Seq[Dependency[S, T]] {
-	return func(yield func(Dependency[S, T]) bool) {
+func Inverse[S comparable, T Identifiable[S]](deps []Dependency[S, T]) iter.Seq2[int, Dependency[S, T]] {
+	return func(yield func(int, Dependency[S, T]) bool) {
 		var stack = pileDeps(new(pile[[]Dependency[S, T]]), deps)
-		for _, list := range stack.iter() {
+
+		for i, list := range stack.iter() {
 			for _, dep := range list {
-				if !yield(dep) {
+				if !yield(i, dep) {
 					return
 				}
 			}

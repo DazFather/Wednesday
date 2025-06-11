@@ -18,14 +18,14 @@ type Component struct {
 }
 
 func (c Component) String() string {
-	s := "{"
+	js, css := "", ""
 	if c.Script != "" {
-		s += "js"
+		js = "js"
 	}
 	if c.Style != "" {
-		s += "css"
+		css = "css"
 	}
-	return fmt.Sprint("c<", c.Type, ">", c.Name, c.Imports, s, "}")
+	return fmt.Sprint("c<", c.Type, ">", c.Name, c.Imports, "{", js, "|", css, "}")
 }
 
 func (c Component) Identifier() string {

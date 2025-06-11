@@ -80,13 +80,13 @@ func (td *TemplateData) buildStatics(errch chan<- error) bool {
 
 	wg.Add(len(td.components))
 	for _, c := range td.components {
-		go func() {
-			if err := td.WriteComponent(c); err != nil {
+		go func(comp Component) {
+			if err := td.WriteComponent(comp); err != nil {
 				success = false
 				errch <- err
 			}
 			wg.Done()
-		}()
+		}(c)
 	}
 	wg.Wait()
 
@@ -120,14 +120,11 @@ func (td *TemplateData) buildPages(errch chan<- error) {
 func (td *TemplateData) Build() chan error {
 	var errch = make(chan error)
 
-	if !td.buildStatics(errch) {
-		close(errch)
-		return errch
-	}
-
 	go func() {
-		td.buildPages(errch)
-		close(errch)
+		defer close(errch)
+		if td.buildStatics(errch) {
+			td.buildPages(errch)
+		}
 	}()
 
 	return errch

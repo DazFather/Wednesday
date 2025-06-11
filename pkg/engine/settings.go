@@ -10,13 +10,13 @@ import (
 type ModuleType string
 
 func (mt *ModuleType) UnmarshalJSON(raw []byte) error {
-	switch strings.ToLower(string(raw)) {
+	switch s := strings.Trim(string(raw), `"'`); strings.ToLower(s) {
 	case "", "text/javascript":
 		*mt = "text/javascript"
 	case "ecma", "module":
 		*mt = "module"
 	default:
-		return errors.New("Unsupported module type, allowed only 'text/javascript' (default) or 'ecma'")
+		return errors.New("Unsupported module type '" + s + "', allowed only 'text/javascript' (default) or 'ecma'")
 	}
 	return nil
 }

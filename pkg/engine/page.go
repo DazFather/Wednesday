@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"slices"
 	"strings"
+	"sync"
 
 	util "github.com/DazFather/Wednesday/pkg/shared"
 )
@@ -50,6 +52,7 @@ func (p *page) Execute(w io.Writer, data any) error {
 	var (
 		raw                       strings.Builder
 		scripts, styles, dynamics []string
+		wg                        sync.WaitGroup
 	)
 
 	// Run first template engine
@@ -65,19 +68,24 @@ func (p *page) Execute(w io.Writer, data any) error {
 		return fmt.Errorf("detected circular dependency in: %s", strings.Join(names, ", "))
 	}
 
-	for dep := range util.Inverse(p.deps) {
+	for lv, dep := range util.Inverse(p.deps) {
 		c := dep.Data
-
+		fmt.Println("importing", c.Name, lv)
 		if c.Script != "" {
 			scripts = append(scripts, p.ScriptURL(c.Name))
 		}
-		if c.Style != "" && p.Module != "module" {
+		if c.Style != "" && (p.Module != "module" || lv == 0) {
 			styles = append(styles, p.StyleURL(c.Name))
 		}
 		if c.Type != static {
 			dynamics = append(dynamics, c.Name)
 		}
 	}
+	wg.Add(3)
+	go func() { scripts = slices.Compact(scripts); wg.Done() }()
+	go func() { styles = slices.Compact(styles); wg.Done() }()
+	go func() { dynamics = slices.Compact(dynamics); wg.Done() }()
+	wg.Wait()
 
 	// Run second template engine to apply imports
 	templ, err := template.New(p.Template.Name()).Delims("{!import{", "}!}").Funcs(template.FuncMap{
