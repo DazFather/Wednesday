@@ -70,7 +70,6 @@ func (p *page) Execute(w io.Writer, data any) error {
 
 	for lv, dep := range util.Inverse(p.deps) {
 		c := dep.Data
-		fmt.Println("importing", c.Name, lv)
 		if c.Script != "" {
 			scripts = append(scripts, p.ScriptURL(c.Name))
 		}

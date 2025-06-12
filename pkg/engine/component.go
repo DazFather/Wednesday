@@ -1,11 +1,45 @@
 package engine
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
+	"strings"
+
+	"github.com/DazFather/Wednesday/pkg/shared"
 )
+
+var (
+	ErrNoHTMLData       = errors.New("no 'html' data found")
+	ErrDuplicateTagData = errors.New("duplicate tag found")
+	ErrInvalidTypeAttr  = errors.New("invalid 'type' attribute")
+
+	spaces = regexp.MustCompile(`(?s)\s+`)
+)
+
+type ComponentType uint8
+
+const (
+	static ComponentType = iota
+	dynamic
+	hybrid
+)
+
+func ParseComponentType(raw string) (ComponentType, error) {
+	switch raw = strings.ToLower(strings.Trim(raw, `"'`)); raw {
+	case "", "static":
+		return static, nil
+	case "dynamic":
+		return dynamic, nil
+	case "hybrid":
+		return hybrid, nil
+	}
+
+	return 0, fmt.Errorf("%w '%s' allowed only 'static' (default), 'dynamic' and 'hybrid'", ErrInvalidTypeAttr, raw)
+}
 
 // Component struct to store extracted content
 type Component struct {
@@ -15,6 +49,7 @@ type Component struct {
 	Script  string
 	Imports []string
 	Type    ComponentType
+	Preload bool
 }
 
 func (c Component) String() string {
@@ -32,38 +67,52 @@ func (c Component) Identifier() string {
 	return c.Name
 }
 
-type ComponentType uint8
-
-const (
-	static ComponentType = iota
-	dynamic
-	hybrid
-)
-
-var (
-	ErrNoHTMLData       = errors.New("no 'html' data found")
-	ErrDuplicateTagData = errors.New("duplicate tag found")
-	ErrInvalidTypeAttr  = errors.New("invalid 'type' attribute")
-)
-
-var (
-	htmlRgx   = regexp.MustCompile(`(?s)<html(\s+type="\s*(\w*?)\s*")?\s*>\s*(.*?)\s*</html>`)
-	styleRgx  = regexp.MustCompile(`(?s)<style\s*>\s*(.*?)\s*</style>`)
-	scriptRgx = regexp.MustCompile(`(?s)<script(\s+require="\s*(.*?)\s*")?\s*>\s*(.*?)\s*</script>`)
-)
-
-func NewComponent(name string, content []byte) (c Component, err error) {
-	c.Name = name
-	if c.HTML, c.Type, err = parseHTML(content); err != nil {
+func ParseComponent(r io.Reader) (c Component, err error) {
+	parsed, err := shared.ParsePlainHtml(r, []string{"script", "style", "html"}, false)
+	if err != nil {
 		return
 	}
 
-	if c.Style, err = parseStyle(content); err != nil {
-		return
+	for _, block := range parsed {
+		switch block.Tag {
+		case "html":
+			c.HTML = block.InnerHTML
+			if val, found := block.GetAttr("type"); found {
+				if c.Type, err = ParseComponentType(val); err != nil {
+					return
+				}
+			}
+
+		case "stlye":
+			c.Style = block.InnerHTML
+		case "script":
+			c.Script = block.InnerHTML
+			for _, attr := range block.Attrs {
+				switch attr.Key {
+				case "preload":
+					c.Preload = attr.Val == "" || strings.ToLower(attr.Val) == "true"
+				case "require":
+					c.Imports = spaces.Split(attr.Val, -1)
+				}
+			}
+		}
 	}
 
-	c.Script, c.Imports, err = parseScript(content)
+	if c.HTML == "" {
+		err = ErrNoHTMLData
+	}
+
 	return
+}
+
+func NewComponent(name string, content []byte) (Component, error) {
+	var c, err = ParseComponent(bytes.NewReader(content))
+	c.Name = name
+
+	if err != nil {
+		err = fmt.Errorf("malformed '%s' component: %w", name, err)
+	}
+	return c, err
 }
 
 func (c Component) WrappedStyle() string {
@@ -87,62 +136,4 @@ func (c Component) WriteStyle(fpath string) error {
 
 func (c Component) WriteScript(fpath string) error {
 	return os.WriteFile(fpath, []byte(c.Script), os.ModePerm)
-}
-
-func parseHTML(content []byte) (inner string, cType ComponentType, err error) {
-	switch matches := htmlRgx.FindAllSubmatch(content, -1); len(matches) {
-	case 0:
-		err = ErrNoHTMLData
-	case 1:
-		if len(matches[0]) != 4 {
-			panic("INVALID HTML REGEXP")
-		}
-		switch string(matches[0][2]) {
-		case "", "static":
-			cType = static
-		case "dynamic":
-			cType = dynamic
-		case "hybrid":
-			cType = hybrid
-		default:
-			err = ErrInvalidTypeAttr
-		}
-		inner = string(matches[0][3])
-	default:
-		err = ErrDuplicateTagData
-	}
-	return
-}
-
-func parseScript(content []byte) (inner string, imports []string, err error) {
-	switch matches := scriptRgx.FindAllSubmatch(content, -1); len(matches) {
-	case 0:
-		// skip
-	case 1:
-		if len(matches[0]) != 4 {
-			panic("INVALID JS REGEXP")
-		}
-		if raw := string(matches[0][2]); raw != "" {
-			imports = regexp.MustCompile(`\s+`).Split(raw, -1)
-		}
-		inner = string(matches[0][3])
-	default:
-		err = ErrDuplicateTagData
-	}
-	return
-}
-
-func parseStyle(content []byte) (inner string, err error) {
-	switch matches := styleRgx.FindAllSubmatch(content, -1); len(matches) {
-	case 0:
-		// skip
-	case 1:
-		if len(matches[0]) != 2 {
-			panic("INVALID CSS REGEXP")
-		}
-		inner = string(matches[0][1])
-	default:
-		err = ErrDuplicateTagData
-	}
-	return
 }
