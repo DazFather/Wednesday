@@ -73,7 +73,7 @@ func (p *page) Execute(w io.Writer, data any) error {
 		if c.Script != "" {
 			scripts = append(scripts, p.ScriptURL(c.Name))
 		}
-		if c.Style != "" && (p.Module != "module" || lv == 0) {
+		if c.Style != "" {
 			styles = append(styles, p.StyleURL(c.Name))
 		}
 		if c.Type != static {
@@ -98,7 +98,7 @@ func (p *page) Execute(w io.Writer, data any) error {
 		"styles": func() template.HTML {
 			s := `<link rel="stylesheet" href="` + p.StyleURL("wed-style") + `" />`
 			for _, style := range styles {
-				s += `<link rel="stylesheet" href="` + style + `"/>`
+				s += `<link rel="stylesheet" href="` + style + `"/>` + "\n"
 			}
 			return template.HTML(s)
 		},
@@ -193,7 +193,7 @@ func (p page) toDepencency(comp Component) (dep ComponentDependency, err error) 
 	dep.Imports = make([]ComponentDependency, len(comp.Imports))
 
 	for i, name := range comp.Imports {
-		if p.Lookup(name) == nil {
+		if p.Lookup("wed-static-"+name) == nil && p.Lookup("wed-dynamic-"+name) == nil {
 			err = fmt.Errorf("on component '%s' trying to require at place %d non existing component '%s'", comp.Name, i+1, name)
 			return
 		}

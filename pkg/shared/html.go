@@ -35,10 +35,7 @@ func ParsePlainHtml(r io.Reader, allowedTagNames []string, allowDuplicate bool) 
 			token := tokenizer.Token()
 			tag := token.Data
 
-			if current != nil {
-				err = errors.New("cannot open <" + tag + "> tag with unclosed <" + current.Tag + "> tag")
-				return
-			}
+			unclosed := current
 
 			for i := range allowedTagNames {
 				if tag == allowedTagNames[i] {
@@ -56,7 +53,12 @@ func ParsePlainHtml(r io.Reader, allowedTagNames []string, allowDuplicate bool) 
 				return
 			}
 
-			current.InnerHTML = string(tokenizer.Raw())
+			if current == unclosed {
+				current.InnerHTML += string(tokenizer.Raw())
+			} else if unclosed != nil {
+				err = errors.New("cannot open <" + tag + "> tag with unclosed <" + unclosed.Tag + "> tag")
+				return
+			}
 
 		case html.EndTagToken:
 			tag, _ := tokenizer.TagName()

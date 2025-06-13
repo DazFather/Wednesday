@@ -82,8 +82,7 @@ func ParseComponent(r io.Reader) (c Component, err error) {
 					return
 				}
 			}
-
-		case "stlye":
+		case "style":
 			c.Style = block.InnerHTML
 		case "script":
 			c.Script = block.InnerHTML
