@@ -11,7 +11,6 @@ import (
 
 type TemplateData struct {
 	collected *template.Template
-	dynamics  map[string]string
 	Settings
 	pages      []*page
 	components []Component
@@ -47,7 +46,6 @@ func (td *TemplateData) AddComponent(c Component) (err error) {
 		fallthrough
 	case dynamic:
 		content := c.WrappedDynamicHTML()
-		td.dynamics[c.Name] = content
 		_, err = td.collected.New("wed-dynamic-" + c.Name).Parse(content)
 	}
 
