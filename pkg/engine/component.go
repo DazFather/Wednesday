@@ -43,6 +43,7 @@ func ParseComponentType(raw string) (ComponentType, error) {
 
 // Component struct to store extracted content
 type Component struct {
+	Module  *ModuleType
 	Name    string
 	HTML    string
 	Style   string
@@ -50,6 +51,7 @@ type Component struct {
 	Imports []string
 	Type    ComponentType
 	Preload bool
+	Entry   bool
 }
 
 func (c Component) String() string {
@@ -90,8 +92,16 @@ func ParseComponent(r io.Reader) (c Component, err error) {
 				switch attr.Key {
 				case "preload":
 					c.Preload = attr.Val == "" || strings.ToLower(attr.Val) == "true"
+				case "entrypoint": // TODO: find a better name
+					c.Entry = attr.Val == "" || strings.ToLower(attr.Val) == "true"
 				case "require":
 					c.Imports = spaces.Split(attr.Val, -1)
+				case "module":
+					if module, err := ParseModuleType(attr.Val); err == nil {
+						c.Module = &module
+					} else {
+						return c, err
+					}
 				}
 			}
 		}

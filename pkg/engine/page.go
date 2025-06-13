@@ -68,10 +68,16 @@ func (p *page) Execute(w io.Writer, data any) error {
 		return fmt.Errorf("detected circular dependency in: %s", strings.Join(names, ", "))
 	}
 
-	for lv, dep := range util.Inverse(p.deps) {
+	for _, dep := range util.Inverse(p.deps) {
 		c := dep.Data
 		if c.Script != "" {
-			scripts = append(scripts, p.ScriptURL(c.Name))
+			modType := p.Module
+			if c.Module != nil {
+				modType = *c.Module
+			}
+			if modType == noModule || c.Entry {
+				scripts = append(scripts, p.ScriptTag(c.Name, !c.Preload, c.Module))
+			}
 		}
 		if c.Style != "" {
 			styles = append(styles, p.StyleURL(c.Name))
@@ -103,11 +109,7 @@ func (p *page) Execute(w io.Writer, data any) error {
 			return template.HTML(s)
 		},
 		"scripts": func() template.HTML {
-			s := `<script type="` + string(p.Module) + `" src="` + p.ScriptURL("wed-utils") + `"></script>`
-			for _, script := range scripts {
-				s += `<script defer type="` + string(p.Module) + `" src="` + script + `"></script>`
-			}
-			return template.HTML(s)
+			return template.HTML(p.ScriptTag("wed-utils", false, nil) + "\n" + strings.Join(scripts, "\n"))
 		},
 	}).Parse(raw.String())
 
