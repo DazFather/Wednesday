@@ -1,22 +1,16 @@
 <style>
-	.flex-center {
-		display: inline-flex;
-		flex-direction: column;
-		place-content: center;
-		text-align: center;
-		margin: 0 auto;
-	}
+	/* you can declared properties here */
+	color: whitesmoke;
+	font-size: 1.75em;
 
 	.cover {
-		height: 100vh;
-		width: 100vw;
+		min-height: 100vh;
+		min-width: 100vw;
 		background-image: linear-gradient(
 			45deg,
 			hsl(0, 100%, 50%),
 			hsl(180, 100%, 50%)
 		);
-		color: whitesmoke;
-		font-size: 1.75em;
 		gap: 2em;
 	}
 
@@ -25,8 +19,11 @@
 		border-radius: 0.15em;
 	}
 
-	.card {
+	/* CSS nesting is natively supported by most browsers now!
+		wed uses it to incaplusulate this style only for this "app" component */
+	.try-out-section {
 		max-width: 40ch;
+		margin: 0 auto;
 		gap: 0.5em;
 
 		input[type="text"] {
@@ -38,6 +35,13 @@
 			background-color: hsla(0, 0%, 100%, 0.5);
 		}
 	}
+
+	/* 'flex-center' (and 'inline-flex-center') is a class provided by the default
+		inside wed-style.css with CSS normalization */
+	.flex-center {
+		flex-direction: column;
+	}
+
 </style>
 <html>
 	<div class="cover flex-center">
@@ -47,8 +51,8 @@
 			<!-- Example of component 'props' -->
 			<strong>to <mark>{{ index .Props.title 0 }}</mark>{{ index .Props.title 1 }}</strong>
 		</header>
-		<!-- Example of useBinds -->
-		<section class="card flex-center">
+		<!-- Example of useBinds - bind="property:name:events" -->
+		<section class="try-out-section flex-center">
 			<strong>Explore native
 				<mark bind="innerText:text">double bindings</mark>
 			</strong>
@@ -60,11 +64,20 @@
 		</section>
 	</div>
 </html>
-<script>
-	// By default good-old text/javascript is being used where all is public
-	// you can put the require attribute to the script to specify the name of the
-	// component you need or change the settings to "module": "ecma" to use:
-	//import { useDisplay, useBinds } from './wed-utils.js';
+{!default{ if eq "module" .Module }!}<script entrypoint>
+	import { useDisplay, useBinds } from './wed-utils.js';
+{!default{ else }!}<script>
+	// By default good-old text/javascript is being used where all is public.
+	// You can use the 'require' attribute to the script to specify the name of the
+	// components you need, divided by space.
+	// To use the ECMAScript modules:
+	//  - globally: change the settings on your JSON project settings file to '"module": "ecma"',
+	//  - only on a component: add the attribute 'module="ecma"' to the script tag.
+	// To include a component script at page level using modules you need to add 'entrypoint' on the script.
+	// To imports other stuffs you use the normal syntax like:
+	// import { useDisplay, useBinds } from './wed-utils.js';
+	// but if you're using a dynamic component you still needs to require it
+{!default{ end }!}
 
 	// Example of useDisplay
 	const show = useDisplay(".title", (text) => text + " !");

@@ -46,7 +46,7 @@ func doInit() (err error) {
 		}
 	}
 
-	if err = os.WriteFile(filepath.Join(settings.InputDir, defAppName), appTemplate, 0644); err == nil {
+	if err = os.WriteFile(filepath.Join(settings.InputDir, defAppName), defaultAppComponent(), 0644); err == nil {
 		printlnDone("init", "Successfully created scaffolding project at", gray.Paint(settings.InputDir))
 	}
 	return
