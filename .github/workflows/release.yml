@@ -79,6 +79,8 @@ jobs:
     name: Checksum and sign
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+      contents: write
 
     steps:
       - name: Download all artifacts
