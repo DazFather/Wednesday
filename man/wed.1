@@ -1,9 +1,11 @@
-.TH WED 1 2025-07-06 "Wednesday CLI" "User Commands"
+.TH WED 1 2025-07-14 "Wednesday CLI" "User Commands"
 .SH NAME
 wed \- static site builder and component manager for the Wednesday framework
+
 .SH SYNOPSIS
 .B wed
 [\fIcommand\fR] [\fIoptions\fR]
+
 .SH DESCRIPTION
 \fBWednesday\fR is a static site generator and component manager. It allows you to build projects, use shared components from trusted libraries, and serve them locally.
 
@@ -11,6 +13,8 @@ wed \- static site builder and component manager for the Wednesday framework
 .TP
 .B build
 Compile the project into a static site. Treats all \fI.wed.html\fR as components and \fI.tmpl\fR as pages.
+The cli will look recursively in all the project directories.
+Results will be generated on the output directory. 
 
 .TP
 .B init [directory]
@@ -23,20 +27,20 @@ Build and serve the project statically via HTTP.
 .B Options:
 .TP
 \fB\-l\fR, \fB\-\-live\fR
-Enable automatic rebuilding on changes or at specified interval.
+Enable automatic rebuilding on detected changes or at specified time interval.
 .TP
 \fB\-p\fR, \fB\-\-port\fR
 Specify server port (default \fI:8080\fR).
 
 .TP
 .B run <command>
-Execute a user-defined pipeline of shell commands, as defined in the project settings.
+Execute a pipeline of shell commands, as defined in the project settings.
 
 .TP
 .B lib <subcommand>
 Manage and interact with external libraries.
 
-.SH LIBRARY SUBCOMMANDS
+.SS LIBRARY SUBCOMMANDS
 .TP
 .B search [pattern]
 Search for components in trusted libraries.
@@ -85,19 +89,11 @@ Show the current version.
 .SH FILES
 .TP
 .I wed-settings.json
-Default settings file for a project. If not present, sensible defaults are used.
-
-.SH ENVIRONMENT
-.TP
-.B COMSPEC
-Used to select shell on Windows systems.
-.TP
-.B SHELL
-Used to select shell on UNIX systems. Defaults to \fBsh\fR if not found.
+Default settings file for a project. If not present, defaults values are used.
 
 .SH AUTHOR
 Written by Davide Lavermicocca <dlavermicocca99.uni@gmail.com>.
 
 .SH SEE ALSO
-.BR go (1)
 .BR wednesday (7)
+

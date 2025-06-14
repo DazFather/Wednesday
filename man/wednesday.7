@@ -1,6 +1,10 @@
-.TH WEDNESDAY 7 2025-06-05 "Wednesday Web Framework"
+.TH WEDNESDAY 7 2025-06-14 "Wednesday Web Framework"
+
+
 .SH NAME
 wednesday \- component-based framework for site generation
+
+
 .SH DESCRIPTION
 Wednesday is a front-end web framework that aims to stay close to the browser while still providing a solid developer experience and quality-of-life features.
 
@@ -78,13 +82,32 @@ Makes the component available both statically and dynamically.
 .SS script \fI(optional)\fR
 A pseudo-HTML tag containing the JavaScript logic for the component.
 If non-empty, a `.js` file with the same name is generated.
+This tag can optionally have different attributes:
 
-Scripts are typically imported in the page head and evaluated later using the \fIdefer\fR attribute.
+.TP
+.B preload
+Boolean atribute.
+Scripts are typically imported in the page head and evaluated later, when all html content has been successfully rendered, using the \fIdefer\fR attribute.
+It\'s possible to use \fBpreload\fR to change this bahavior, letting the browser run the script before the page is ready 
 
-It also supports a \fBrequire\fR attribute listing component names that must be evaluated first.
-This is useful for controlling dependency order.
+.TP
+.B require
+Lists all components by name that are used by the current script.
+In text/javascript everything is public this is used to decide witch one must be evaluated first.
+On ECMAScript modules imports are managed by the related syntax.
+Components used dynamically by the script must be included no matter the module type
 
-By default, scripts use \fItext/javascript\fR, but switching to \fI\(dqmodule\(dq: \(dqecma\(dq\fR in the project settings enables ES module support, allowing you to handle imports manually.
+.TP
+.B module
+Overrides the default module (see PROJECT CONFIGURATION section) only for this component.
+It follows the same parsing rules as the JSON project settings file, so if placed but empty value it defaults to "text/javascript".
+It\' recommended never to never use it in this way. Always insert the module type
+
+.TP
+.B entrypoint
+Boolean atribute.
+When using ECMAScript modules the current script will be imported directly in the page head tag
+
 
 .SS style \fI(optional)\fR
 A pseudo-HTML tag containing styles scoped to the component.
@@ -113,7 +136,7 @@ Used in a pipeline to pass data:
 .EE
 Values can be accessed inside the \fIcomponent\fR with:
 .B{{ .Props.<key> }}
-.EX
+.EX .\" html
 <li><em>mentor:</em> <span>{{ .Props.NicoNex   }}</span></li>
 <li><em>mentee:</em> <span>{{ .Props.DazFather }}</span></li>
 .EE
@@ -128,11 +151,14 @@ Registers one or more components for later injection using `drop`:
 .TP
 .B drop
 Injects components previously registered with `hold`.
+.EX
+{{ drop . }}
+.EE
 
 .TP
 .B list <value> <value2> <value3>
 Creates a slice of values:
-.EX
+.EX .\" html
 <ol>{{ range list "pippo" "pluto" "paperino" }}
   <li><span>{{ . }}</span></li>
 {{ end }}</ol>
@@ -157,7 +183,7 @@ However, they support additional syntax to manage resource imports more explicit
 .TP
 .B {!import{ \(dqdynamics\(dq }!}
 Generates import tags for dynamic components.
-Typically used as the first item inside the \fI<body>\fR tag.
+Typically placed as the first item inside the \fI<body>\fR tag.
 
 .TP
 .B {!import{ \(dqstyles\(dq }!}
@@ -174,7 +200,6 @@ Also usually placed inside the \fI<head>\fR tag.
 All Wednesday pages automatically import the \fIwed-utils.js\fR script, which provides a set of DOM utility functions designed to simplify template-driven interactivity.
 These utilities include helpers for managing state, reacting to changes, binding values, and handling templates.
 
-
 .SS useDisplay(\fItarget\fR, \fImutate?\fR)
 Creates a function that updates the \fIinnerText\fR of a DOM element.
 The target can be a CSS selector or a DOM element.
@@ -182,7 +207,7 @@ An optional \fImutate\fR function may be passed to transform the value before di
 
 Here a small example:
 
-.EX
+.EX .\" javascript
 const show = useDisplay(".output", t => "Hello " + t)
 show("World") // => updates .output with "Hello World"
 .EE
@@ -195,7 +220,7 @@ Often used to reactively update DOM when state changes.
 
 Here a small example:
 
-.EX
+.EX .\" javascript
 const count = useEffect(0, newVal => console.log("Updated:", newVal))
 count.value = 42 // triggers the effect
 .EE
@@ -207,7 +232,7 @@ Helps prevent unintended side effects in large codebases.
 
 Here a small example:
 
-.EX
+.EX .\" javascript
 const mirror = useMirror("input", ["value", "disabled"])
 mirror.value = "Test"
 mirror.disabled = true
@@ -224,7 +249,7 @@ Multiple bindings can be separated by spaces.
 
 Here a small example:
 
-.EX
+.EX .\" html
 <html>
   <h1>Welcome <span bind="innerText:user">new user</span>!</h1>
   <input bind="value:user:input">
@@ -242,7 +267,7 @@ The optional \fIinit\fR callback can customize each clone before insertion.
 
 Here a small example:
 
-.EX
+.EX .\" javascript
 const { clone } = useTemplate("todo-item", node => {
   node._binds = useBinds(node)
   return node
@@ -257,24 +282,19 @@ Alternatively, a different file can be specified via the \fI--settings\fR flag, 
 
 Supported fields include:
 
-.TP
-.B vars
+.SS vars
 A key-value map of build-time variables, available via the template engine using \fB{{ var \(dqkey\(dq }}\fR.
 
-.TP
-.B commands
+.SS commands
 A map from pipeline names to shell commands, which can be run using \fBwed run <pipeline-name>\fR.
 
-.TP
-.B output_dir
-The directory where the compiled site will be placed.
+.SS output_dir
+The directory where the compiled site will be placed. (default: \(dq./build\(dq)
 
-.TP
-.B input_dir
-The directory where Wednesday will search for components and pages.
+.SS input_dir
+The directory where Wednesday will search for components and pages. (default: \(dq.\(dq)
 
-.TP
-.B module
+.SS module
 Defines the JavaScript module type for importing scripts on pages:
 .RS
 
