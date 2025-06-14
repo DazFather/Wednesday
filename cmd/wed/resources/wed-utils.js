@@ -161,6 +161,22 @@ function useEffect(start, onChange) {
 	};
 }
 
+/**
+ * Access and modify resources between text/javascript and module across the page.
+ * @param {?} obj - Any resources to pass. Objects (including array) will be unpacked, all others will replace bridge()[0]
+ * @return {object} Storage object (reference will never change).
+ */
+function bridge(obj) {
+	if (arguments.length === 0)
+		return window._wed_bridge ?? (window._wed_bridge = [])
+
+	if (typeof obj != "object") obj = [obj]
+
+	return !window._wed_bridge
+		? window._wed_bridge = Object.assign([], obj)
+		: Object.assign(window._wed_bridge, {...obj })
+}
+
 {!default{ if eq "module" .Module }!}
-export { select, useMirror, useDisplay, useTemplate, useBinds, useEffect }
+export { select, useMirror, useDisplay, useTemplate, useBinds, useEffect, bridge }
 {!default{ end }!}
