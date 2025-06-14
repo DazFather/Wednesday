@@ -8,6 +8,8 @@ Wednesday
 *.dll
 *.so
 *.dylib
+/wed
+cmd/wed/wed
 
 # Test binary, built with `go test -c`
 *.test
@@ -24,3 +26,13 @@ go.work.sum
 
 # env file
 .env
+
+# secrets
+*.key
+
+# local man test
+man/*.gz
+
+# scripts living in the root (automated developement stuffs)
+/*.sh
+
