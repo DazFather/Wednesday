@@ -21,20 +21,16 @@ var (
 	defStyleContent []byte
 	//go:embed resources/wed-utils.js
 	defScriptContent []byte
-)
-
-const (
-	defStyleName      = "wed-style"
-	defScriptName     = "wed-utils"
-	indexTemplateName = "index.tmpl"
-	defAppName        = "app.wed.html"
+	//go:embed resources/wed-utils.mjs
+	defScriptModuleContent []byte
 )
 
 func doInit() (err error) {
 	m := map[string][]byte{
-		settings.StylePath(defStyleName):                    defStyleContent,
-		settings.ScriptPath(defScriptName):                  defaultScript(),
-		filepath.Join(settings.InputDir, indexTemplateName): indexTemplate,
+		settings.StylePath("wed-style"):                defStyleContent,
+		settings.ScriptPath("wed", "utils.js"):         defScriptContent,
+		settings.ScriptPath("wed", "utils.mjs"):        defScriptModuleContent,
+		filepath.Join(settings.InputDir, "index.tmpl"): indexTemplate,
 	}
 
 	for name, content := range m {
@@ -46,7 +42,7 @@ func doInit() (err error) {
 		}
 	}
 
-	if err = os.WriteFile(filepath.Join(settings.InputDir, defAppName), defaultAppComponent(), 0644); err == nil {
+	if err = os.WriteFile(filepath.Join(settings.InputDir, "app.wed.html"), defaultAppComponent(), 0644); err == nil {
 		printlnDone("init", "Successfully created scaffolding project at", gray.Paint(settings.InputDir))
 	}
 	return

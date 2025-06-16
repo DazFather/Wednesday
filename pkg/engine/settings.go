@@ -40,24 +40,46 @@ type Settings struct {
 	Module    ModuleType          `json:"module,omitempty"`
 }
 
-func (s Settings) StylePath(filename string) string {
-	return filepath.Join(s.OutputDir, "style", filename+".css")
+func (s Settings) StylePath(elem ...string) string {
+	pices := []string{s.OutputDir, "style"}
+	if size := len(elem); size != 0 {
+		if filepath.Ext(elem[size-1]) == "" {
+			elem[size-1] += ".css"
+		}
+		pices = append(pices, elem...)
+	}
+
+	return filepath.Join(pices...)
 }
 
-func (s Settings) ScriptPath(filename string) string {
-	return filepath.Join(s.OutputDir, "script", filename+".js")
+func (s Settings) ScriptPath(elem ...string) string {
+	pices := []string{s.OutputDir, "script"}
+	if size := len(elem); size != 0 {
+		if filepath.Ext(elem[size-1]) == "" {
+			elem[size-1] += ".js"
+		}
+		pices = append(pices, elem...)
+	}
+
+	return filepath.Join(pices...)
 }
 
-func (s Settings) StyleURL(name string) string {
-	link, err := url.JoinPath("style", name+".css")
+func (s Settings) StyleURL(elem ...string) string {
+	if size := len(elem); size != 0 && filepath.Ext(elem[size-1]) == "" {
+		elem[size-1] += ".css"
+	}
+	link, err := url.JoinPath("style", elem...)
 	if err != nil {
 		panic(err)
 	}
 	return link
 }
 
-func (s Settings) ScriptURL(name string) string {
-	link, err := url.JoinPath("script", name+".js")
+func (s Settings) ScriptURL(elem ...string) string {
+	if size := len(elem); size != 0 && filepath.Ext(elem[size-1]) == "" {
+		elem[size-1] += ".js"
+	}
+	link, err := url.JoinPath("script", elem...)
 	if err != nil {
 		panic(err)
 	}

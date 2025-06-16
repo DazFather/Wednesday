@@ -161,22 +161,9 @@ func liveReload() chan error {
 	return errch
 }
 
-func defaultScript() []byte {
-	var buf = bytes.NewBuffer([]byte{})
-	t, err := template.New(defScriptName).Delims("{!default{", "}!}").Parse(string(defScriptContent))
-	if err != nil {
-		panic(err)
-	}
-
-	if err = t.Execute(buf, settings); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
-}
-
 func defaultAppComponent() []byte {
 	var buf = bytes.NewBuffer([]byte{})
-	t, err := template.New(defScriptName).Delims("{!default{", "}!}").Parse(string(appTemplate))
+	t, err := template.New("temp").Delims("{!default{", "}!}").Parse(string(appTemplate))
 	if err != nil {
 		panic(err)
 	}

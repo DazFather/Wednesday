@@ -177,6 +177,13 @@ function bridge(obj) {
 		: Object.assign(window._wed_bridge, {...obj })
 }
 
-{!default{ if eq "module" .Module }!}
-export { select, useMirror, useDisplay, useTemplate, useBinds, useEffect, bridge }
-{!default{ end }!}
+// make funciton available accross all page (also used to re-import them via ECMAScript module when needed)
+window._wed_utility = {
+	select,
+	useMirror,
+	useDisplay,
+	useTemplate,
+	useBinds,
+	useEffect,
+	bridge
+}

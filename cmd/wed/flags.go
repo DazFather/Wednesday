@@ -35,9 +35,14 @@ var settings FlagSettings
 
 // NewSettingsFromJSON creates a new Settings instance from a JSON string.
 func NewSettingsFromJSON(path string) (s FileSettings, err error) {
+	s = FileSettings{path, engine.Settings{
+		OutputDir: "build",
+		InputDir:  ".",
+		Module:    "text/javascript",
+	}}
+
 	b, err := os.ReadFile(path)
 	if err != nil {
-		s.OutputDir, s.InputDir = "build", "."
 		return
 	}
 
@@ -49,7 +54,6 @@ func NewSettingsFromJSON(path string) (s FileSettings, err error) {
 
 func (s *FileSettings) Set(spath string) (err error) {
 	*s, err = NewSettingsFromJSON(spath)
-	s.from = spath
 	return
 }
 

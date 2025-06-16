@@ -65,7 +65,7 @@
 	</div>
 </html>
 {!default{ if eq "module" .Module }!}<script entrypoint>
-	import { useDisplay, useBinds } from './wed-utils.js';
+	import { useDisplay, useBinds } from '@wed/utils';
 {!default{ else }!}<script>
 	// By default good-old text/javascript is being used where all is public.
 	// You can use the 'require' attribute to the script to specify the name of the
@@ -75,7 +75,7 @@
 	//  - only on a component: add the attribute 'module="ecma"' to the script tag.
 	// To include a component script at page level using modules you need to add 'entrypoint' on the script.
 	// To imports other stuffs you use the normal syntax like:
-	// import { useDisplay, useBinds } from './wed-utils.js';
+	// import { useDisplay, useBinds } from '@wed/utils';
 	// but if you're using a dynamic component you still needs to require it
 {!default{ end }!}
 
