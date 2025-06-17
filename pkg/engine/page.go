@@ -68,12 +68,16 @@ func (p *page) Execute(w io.Writer, data any) error {
 		return fmt.Errorf("detected circular dependency in: %s", strings.Join(names, ", "))
 	}
 
+	usingECMA := p.Module == ecmaModule
+
 	for _, dep := range util.Inverse(p.deps) {
 		c := dep.Data
 		if c.Script != "" {
 			modType := p.Module
 			if c.Module != nil {
-				modType = *c.Module
+				if modType = *c.Module; !usingECMA && modType == ecmaModule {
+					usingECMA = true
+				}
 			}
 			if modType == noModule || c.Entry {
 				scripts = append(scripts, p.ScriptTag(c.Name, !c.Preload, c.Module))
@@ -109,14 +113,14 @@ func (p *page) Execute(w io.Writer, data any) error {
 			return template.HTML(s)
 		},
 		"scripts": func() template.HTML {
-			return template.HTML(
-				`<script type="text/javascript" src="` + p.ScriptURL("wed", "utils") + `"></script>
-				<script type="importmap">{ "imports": {
+			s := `<script type="text/javascript" src="` + p.ScriptURL("wed", "utils") + `"></script>`
+			if usingECMA {
+				s += `<script type="importmap">{ "imports": {
 					"@wed/utils": "/` + p.ScriptURL("wed", "utils.mjs") + `",
 					"@wed/http": "/` + p.ScriptURL("wed", "http.mjs") + `"
-				} }</script>
-				` + strings.Join(scripts, "\n"),
-			)
+				}}</script>`
+			}
+			return template.HTML(s + "\n" + strings.Join(scripts, "\n"))
 		},
 	}).Parse(raw.String())
 
