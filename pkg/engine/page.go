@@ -112,7 +112,8 @@ func (p *page) Execute(w io.Writer, data any) error {
 			return template.HTML(
 				`<script type="text/javascript" src="` + p.ScriptURL("wed", "utils") + `"></script>
 				<script type="importmap">{ "imports": {
-					"@wed/utils": "/` + p.ScriptURL("wed", "utils.mjs") + `"
+					"@wed/utils": "/` + p.ScriptURL("wed", "utils.mjs") + `",
+					"@wed/http": "/` + p.ScriptURL("wed", "http.mjs") + `"
 				} }</script>
 				` + strings.Join(scripts, "\n"),
 			)

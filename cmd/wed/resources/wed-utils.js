@@ -75,12 +75,12 @@ function useDisplay(target, mutate) {
 function useTemplate(templateID, init) {
 	const templ = document.getElementById(templateID);
 	const clone = !init
-		? (target) => templ.content.cloneNode(true)
-		: (target) => {
-				const elem = templ.content.cloneNode(true);
-				init(elem);
-				return elem;
-			};
+		? () => templ.content.cloneNode(true)
+		: () => {
+			const elem = templ.content.cloneNode(true);
+			init(elem);
+			return elem;
+		};
 
 	return {
 		clone,

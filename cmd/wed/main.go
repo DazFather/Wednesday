@@ -23,6 +23,8 @@ var (
 	defScriptContent []byte
 	//go:embed resources/wed-utils.mjs
 	defScriptModuleContent []byte
+	//go:embed resources/wed-http.mjs
+	defHttpScriptModuleContent []byte
 )
 
 func doInit() (err error) {
@@ -30,6 +32,7 @@ func doInit() (err error) {
 		settings.StylePath("wed-style"):                defStyleContent,
 		settings.ScriptPath("wed", "utils.js"):         defScriptContent,
 		settings.ScriptPath("wed", "utils.mjs"):        defScriptModuleContent,
+		settings.ScriptPath("wed", "http.mjs"):         defHttpScriptModuleContent,
 		filepath.Join(settings.InputDir, "index.tmpl"): indexTemplate,
 	}
 
