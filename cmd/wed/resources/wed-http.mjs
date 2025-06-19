@@ -175,9 +175,8 @@ export class HttpClient {
 
 		try {
 			const res = await fetch(req);
-			if (!res.ok) {
-				throw new HttpError(res);
-			}
+			if (!res.ok) throw new HttpError(res);
+
 			if (!!postprocess) {
 				const out = postprocess(res)
 				return out instanceof Promise ? await out : out
@@ -292,4 +291,61 @@ export class HttpClient {
 
 }
 
+/**
+ * @typedef {Object} FragmentHandler
+ * @property {() => Promise<DocumentFragment>} clone - Async function that returns a new clone of the fetched resource.
+ * @property {(target: Target) => Promise<Node>} appendTo - Async function that appends a new clone of the resource as the last child of the specified target
+ * @property {(target: Target, before?: Target) => Promise<Node>} insertTo - Async function that inserts a new clone of the resource on the specified target before another.
+ * @property {(target: Target) => Promise<Node>} replace - Async function that replaces the specified target with a new clone of the resource.
+ */
+
+/**
+ * Fetches an HTML document or fragment and returns reusable DOM insertion helpers.
+ * @param {string} url - The URL to fetch.
+ * @param {RequestInit} [opt] - Optional fetch options.
+ * @param {(fragment: DocumentFragment) => void} [init] - Optional callback to mutate each clone.
+ * @returns {FragmentHandler}
+ */
+export function useFragment(url, opt = {}, init = null) {
+	const cached = null 
+	
+	const load = async () => {
+		if (cached) return cached
+
+		const response = await fetch(url, opt);
+		if (!response.ok) throw new HttpError(response)
+
+		const htmlText = await response.text();
+
+		const content = document.createElement("div");
+		content.innerHTML = htmlText
+
+		const body = content.querySelector("body")
+			?? content.querySelector("html")
+			?? content
+
+		const fragment = new DocumentFragment();
+		for (let node of body.childNodes) {
+			fragment.appendChild(node.cloneNode(true))
+		}
+
+		return cached = fragment;
+	}
+
+	const clone = !init
+		? async () => await laod()
+		: async () => {
+			const frag = await load();
+			init(frag);
+			return frag;
+		};
+
+	return {
+		clone,
+		appendTo: async (target) => select(target).appendChild(await clone()),
+		insertTo: async (target, before = null) =>
+			select(target).insertBefore(await clone(), before ? select(before) : null),
+		replace: async (target) => select(target).replaceWith(await clone()),
+	};
+}
 

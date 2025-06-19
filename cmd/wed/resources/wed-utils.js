@@ -69,7 +69,7 @@ function useDisplay(target, mutate) {
 /**
  * Generates an object with methods to manage the provided template.
  * @param {string} templateID - The DOM id of the template to use.
- * @param {(cloned: Element) => ?} [mutate] - Optional callback to initialize the template on each clone.
+ * @param {(cloned: Element) => void} [init] - Optional callback to initialize the template on each clone.
  * @return {TemplateHandler} Utility methods for handling the template.
  */
 function useTemplate(templateID, init) {
