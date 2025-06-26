@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -45,6 +46,25 @@ func printlnDone(command string, vals ...any) {
 		fmt.Print("[v] ")
 	}
 	fmt.Println(vals...)
+}
+
+func printlnStackTrace(err error) {
+	i, collected := 0, []string{err.Error()}
+
+	for prev, werr := "", errors.Unwrap(err); werr != nil; werr = errors.Unwrap(werr) {
+		if str := werr.Error(); str != prev {
+			collected[i] = strings.Replace(collected[i], str, "[err: v]", -1)
+			collected = append(collected, str)
+			prev = str
+			i++
+		}
+	}
+
+	for _, str := range collected {
+		if str != "[err: v]" {
+			fmt.Println(" ﹂", gray.Paint(str))
+		}
+	}
 }
 
 var (

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -124,21 +123,19 @@ func build() chan error {
 	return engine.Build(settings.FileSettings.Settings)
 }
 
-func liveReload() chan error {
-	errch, prev := make(chan error), ""
+func liveReload() chan []error {
+	errch, prev := make(chan []error), ""
 
 	var reload = func() error {
 		var (
-			errs error
+			errs []error
 			serr string
 		)
 		for err := range build() {
-			errs = errors.Join(errs, err)
+			errs = append(errs, err)
+			serr += err.Error()
 		}
 
-		if errs != nil {
-			serr = errs.Error()
-		}
 		if serr != prev {
 			errch <- errs
 			prev = serr
@@ -149,12 +146,16 @@ func liveReload() chan error {
 	go func() {
 		defer close(errch)
 
+		var err error
 		if *settings.reload == 0 {
-			if err := watch(settings.InputDir, settings.OutputDir, reload); err != nil {
-				errch <- fmt.Errorf("Live server stopped working cause %w", err)
+			if err = watch(settings.InputDir, settings.OutputDir, reload); err != nil {
+				err = fmt.Errorf("Live server stopped working cause %w", err)
 			}
-		} else if err := each(*settings.reload, reload); err != nil {
-			errch <- fmt.Errorf("Live server stopped working cause %w", err)
+		} else if err = each(*settings.reload, reload); err != nil {
+			err = fmt.Errorf("Live server stopped working cause %w", err)
+		}
+		if err != nil {
+			errch <- []error{err}
 		}
 	}()
 

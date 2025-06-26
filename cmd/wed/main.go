@@ -56,6 +56,7 @@ func doBuild() (err error) {
 	for err := range build() {
 		i++
 		fmt.Println(red.Paint(i), err)
+		printlnStackTrace(err)
 	}
 	if i > 0 {
 		return fmt.Errorf("Failed to build site errors: %d", i)
@@ -72,11 +73,19 @@ func doServe() error {
 
 	if settings.reload != nil {
 		go func() {
-			for err := range liveReload() {
-				if err == nil {
+			for errs := range liveReload() {
+				switch len(errs) {
+				case 0:
 					printlnDone("build", "Site successfully rebuilt, no error found\n")
-				} else {
-					printlnFailed("build", "Cannot rebuild site fond:\n", err)
+				case 1:
+					printlnFailed("build", "Cannot rebuild site fond:\n", errs[0])
+					printlnStackTrace(errs[0])
+				default:
+					printlnFailed("build", "Cannot rebuild site fond", len(errs), "errors:")
+					for i, err := range errs {
+						fmt.Println(red.Paint(i+1), err)
+						printlnStackTrace(err)
+					}
 				}
 			}
 		}()

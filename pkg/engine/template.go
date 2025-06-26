@@ -45,8 +45,9 @@ func (td *TemplateData) AddComponent(c Component) (err error) {
 		}
 		fallthrough
 	case dynamic:
-		content := c.WrappedDynamicHTML()
-		_, err = td.collected.New("wed-dynamic-" + c.Name).Parse(content)
+		_, err = td.collected.New("wed-dynamic-" + c.Name).Parse(c.WrappedDynamicHTML())
+	default:
+		return fmt.Errorf("invalid type %s", c.Type)
 	}
 
 	if err == nil {
@@ -142,23 +143,18 @@ func (td *TemplateData) Walk() (errch chan error) {
 
 			switch name, ext := splitExt(info.Name()); ext {
 			case ".tmpl":
-				content, err := os.ReadFile(path)
-				if err != nil {
-					errch <- fmt.Errorf("cannot read template %q: %s", path, err)
-				}
-
-				if _, err := td.newPage(name).Parse(string(content)); err != nil {
-					errch <- fmt.Errorf("cannot parse template %q: %s", path, err)
+				if content, err := os.ReadFile(path); err != nil {
+					errch <- fmt.Errorf("cannot read page template %q: %w", path, err)
+				} else if _, err := td.newPage(name).Parse(string(content)); err != nil {
+					errch <- fmt.Errorf("cannot parse page template %q: %w", path, err)
 				}
 			case ".wed.html":
-				content, err := os.ReadFile(path)
-				if err != nil {
-					errch <- fmt.Errorf("cannot read component %q: %s", path, err)
-				}
-				if c, err := NewComponent(name, content); err == nil {
-					td.AddComponent(c)
-				} else {
-					errch <- fmt.Errorf("cannot parse component %q: %s", path, err)
+				if content, err := os.ReadFile(path); err != nil {
+					errch <- fmt.Errorf("cannot read component %q: %w", path, err)
+				} else if c, err := NewComponent(name, content); err != nil {
+					errch <- fmt.Errorf("cannot parse component %q: %w", path, err)
+				} else if err = td.AddComponent(c); err != nil {
+					errch <- fmt.Errorf("cannot create component %q: %w", path, err)
 				}
 			}
 
