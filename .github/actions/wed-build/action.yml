@@ -1,0 +1,70 @@
+name: Build with Wednesday
+description: Build a static site using the `wed` CLI
+
+inputs:
+  version:
+    description: Wednesday release tag version (e.g., v1.2.3). If empty, latest release will be used.
+    required: false
+    default: ""
+  flags:
+    description: wed build flags
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Detect platform
+      id: platform
+      shell: bash
+      run: |
+        OS=$(uname | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+        case "$ARCH" in
+          x86_64) ARCH=amd64 ;;
+          aarch64) ARCH=arm64 ;;
+          *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+        esac
+        echo "os=$OS" >> "$GITHUB_OUTPUT"
+        echo "arch=$ARCH" >> "$GITHUB_OUTPUT"
+
+    - name: Determine wed version
+      id: wed-version
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.version }}" ]; then
+          RESPONSE=$(curl -s https://api.github.com/repos/DazFather/Wednesday/releases/latest)
+          VERSION=$(echo "$RESPONSE" | jq -r .tag_name)
+          if [ "$VERSION" == "null" ]; then
+            echo "❌ Failed to fetch latest version from GitHub API"
+            exit 1
+          fi
+        else
+          VERSION="${{ inputs.version }}"
+        fi
+        echo "Using wed version: $VERSION"
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+    - name: Download wed ${{ steps.wed-version.outputs.version }}
+      shell: bash
+      run: |
+        ZIP=wed-${{ steps.platform.outputs.os }}-${{ steps.platform.outputs.arch }}.zip
+        URL=https://github.com/DazFather/Wednesday/releases/download/${{ steps.wed-version.outputs.version }}/$ZIP
+        echo "Downloading $URL"
+        curl -sSL "$URL" -o wed.zip
+
+    - name: Extract wed binary
+      shell: bash
+      run: |
+        unzip wed.zip
+        if [[ "${{ steps.platform.outputs.os }}" == "windows" ]]; then
+          mv wed.exe wed
+        fi
+        chmod +x wed
+        echo "$PWD" >> $GITHUB_PATH
+
+    - name: Build site
+      shell: bash
+      run: |
+        wed build ${{ inputs.flags }}
+
