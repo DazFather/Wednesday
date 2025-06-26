@@ -35,6 +35,17 @@ runs:
         echo "ext=$EXT" >> "$GITHUB_OUTPUT"
         echo "binary=$BINARY" >> "$GITHUB_OUTPUT"
 
+    - name: Install jq (if needed)
+      shell: bash
+      run: |
+        if ! command -v jq &> /dev/null; then
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update && sudo apt-get install -y jq
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            brew install jq
+          fi
+        fi
+
     - name: Determine wed version
       id: wed-version
       shell: bash
@@ -63,10 +74,11 @@ runs:
       shell: bash
       run: |
         if [[ "${{ steps.platform.outputs.ext }}" == "zip" ]]; then
-          unzip wed-archive.zip
+          unzip -o wed-archive.zip
         else
-          tar -xf wed-archive.tar.gz
+          tar -xvf wed-archive.tar.gz
         fi
+        ls -la
 
     - name: Normalize wed binary
       shell: bash
@@ -78,8 +90,12 @@ runs:
         fi
         echo "$PWD" >> "$GITHUB_PATH"
 
+    - name: Print working directory
+      run: pwd
+    - name: List project contents
+      run: ls -laR
+
     - name: Build site
       shell: bash
       run: |
         ./wed build ${{ inputs.flags }}
-
