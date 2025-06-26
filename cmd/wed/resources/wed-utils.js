@@ -105,8 +105,7 @@ function useBinds(target, mutate) {
 	const bindMap = Array.from(parent.querySelectorAll("[bind]")).reduce(
 		(obj, elem) => {
 			elem.contenteditable = "true";
-			elem
-				.getAttribute("bind")
+			elem.getAttribute("bind")
 				.match(/([\w:]+)/g)
 				.forEach((attr) => {
 					let [prop, name, eventName] = attr.split(":");

@@ -22,10 +22,18 @@ menu {
 }
 
 .flex-center { display: flex; }
-.inline-flex-center { display: inline-flex; }
+.inline-flex-center {
+    display: inline-flex;
+    vertical-align: middle;
+}
 .flex-center, .inline-flex-center {
     place-content: center;
     align-content: center;
     justify-content: center;
     text-align: center;
+    align-items: center;
+}
+
+*, *::before, *::after {
+	box-sizing: border-box;
 }
