@@ -71,8 +71,9 @@ runs:
     - name: Normalize wed binary
       shell: bash
       run: |
-        mv "${{ steps.platform.outputs.binary }}" wed
-        if [ "${{ runner.os }}" != "Windows" ]; then
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          mv wed.exe wed
+        else
           chmod +x wed
         fi
         echo "$PWD" >> "$GITHUB_PATH"
@@ -80,5 +81,5 @@ runs:
     - name: Build site
       shell: bash
       run: |
-        wed build ${{ inputs.flags }}
+        ./wed build ${{ inputs.flags }}
 
