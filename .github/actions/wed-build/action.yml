@@ -7,35 +7,41 @@ inputs:
     required: false
     default: ""
   flags:
-    description: wed build flags
+    description: Flags to pass to `wed build`.
     required: false
     default: ""
 
 runs:
   using: "composite"
   steps:
-    - name: Detect platform
+    - name: Set platform info
       id: platform
       shell: bash
       run: |
-        OS=$(uname | tr '[:upper:]' '[:lower:]')
-        ARCH=$(uname -m)
-        case "$ARCH" in
-          x86_64) ARCH=amd64 ;;
-          aarch64) ARCH=arm64 ;;
-          *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+        case "${{ runner.os }}" in
+          Linux | macOS)
+            EXT="tar.gz"
+            BINARY="wed"
+            ;;
+          Windows)
+            EXT="zip"
+            BINARY="wed.exe"
+            ;;
+          *)
+            echo "Unsupported OS: ${{ runner.os }}"
+            exit 1
+            ;;
         esac
-        echo "os=$OS" >> "$GITHUB_OUTPUT"
-        echo "arch=$ARCH" >> "$GITHUB_OUTPUT"
+        echo "ext=$EXT" >> "$GITHUB_OUTPUT"
+        echo "binary=$BINARY" >> "$GITHUB_OUTPUT"
 
     - name: Determine wed version
       id: wed-version
       shell: bash
       run: |
         if [ -z "${{ inputs.version }}" ]; then
-          RESPONSE=$(curl -s https://api.github.com/repos/DazFather/Wednesday/releases/latest)
-          VERSION=$(echo "$RESPONSE" | jq -r .tag_name)
-          if [ "$VERSION" == "null" ]; then
+          VERSION=$(curl -s https://api.github.com/repos/DazFather/Wednesday/releases/latest | jq -r .tag_name)
+          if [ "$VERSION" == "null" ] || [ -z "$VERSION" ]; then
             echo "❌ Failed to fetch latest version from GitHub API"
             exit 1
           fi
@@ -48,20 +54,28 @@ runs:
     - name: Download wed ${{ steps.wed-version.outputs.version }}
       shell: bash
       run: |
-        ZIP=wed-${{ steps.platform.outputs.os }}-${{ steps.platform.outputs.arch }}.zip
-        URL=https://github.com/DazFather/Wednesday/releases/download/${{ steps.wed-version.outputs.version }}/$ZIP
+        FILENAME="wed-${{ runner.os }}-amd64.${{ steps.platform.outputs.ext }}"
+        URL="https://github.com/DazFather/Wednesday/releases/download/${{ steps.wed-version.outputs.version }}/$FILENAME"
         echo "Downloading $URL"
-        curl -sSL "$URL" -o wed.zip
+        curl -sSL "$URL" -o "wed-archive.${{ steps.platform.outputs.ext }}"
 
     - name: Extract wed binary
       shell: bash
       run: |
-        unzip wed.zip
-        if [[ "${{ steps.platform.outputs.os }}" == "windows" ]]; then
-          mv wed.exe wed
+        if [[ "${{ steps.platform.outputs.ext }}" == "zip" ]]; then
+          unzip wed-archive.zip
+        else
+          tar -xf wed-archive.tar.gz
         fi
-        chmod +x wed
-        echo "$PWD" >> $GITHUB_PATH
+
+    - name: Normalize wed binary
+      shell: bash
+      run: |
+        mv "${{ steps.platform.outputs.binary }}" wed
+        if [ "${{ runner.os }}" != "Windows" ]; then
+          chmod +x wed
+        fi
+        echo "$PWD" >> "$GITHUB_PATH"
 
     - name: Build site
       shell: bash
