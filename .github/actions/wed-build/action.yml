@@ -91,9 +91,14 @@ runs:
         echo "$PWD" >> "$GITHUB_PATH"
 
     - name: Print working directory
-      run: pwd
+      shell: bash
+      run: |
+        pwd
+
     - name: List project contents
-      run: ls -laR
+      shell: bash
+      run: |
+        ls -laR
 
     - name: Build site
       shell: bash
