@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"slices"
 	"strings"
 	"sync"
 
@@ -91,9 +90,9 @@ func (p *page) Execute(w io.Writer, data any) error {
 		}
 	}
 	wg.Add(3)
-	go func() { scripts = slices.Compact(scripts); wg.Done() }()
-	go func() { styles = slices.Compact(styles); wg.Done() }()
-	go func() { dynamics = slices.Compact(dynamics); wg.Done() }()
+	go func() { scripts = util.Compact(scripts); wg.Done() }()
+	go func() { styles = util.Compact(styles); wg.Done() }()
+	go func() { dynamics = util.Compact(dynamics); wg.Done() }()
 	wg.Wait()
 
 	// Run second template engine to apply imports
@@ -229,6 +228,7 @@ func (p *page) props(props ...any) ComponentInfo {
 		skipped int
 		res     = ComponentInfo{Props: make(map[string]any)}
 	)
+
 	for i, val := range props {
 		if (i-skipped)%2 == 0 {
 			switch v := val.(type) {

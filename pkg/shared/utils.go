@@ -36,3 +36,19 @@ func FetchContent(link string) (content []byte, err error) {
 	}
 	return os.ReadFile(link)
 }
+
+func Compact[T comparable](list []T) []T {
+	m := make(map[T]bool)
+	for _, item := range list {
+		if found, _ := m[item]; !found {
+			m[item] = true
+		}
+	}
+
+	i, res := 0, make([]T, len(m))
+	for item := range m {
+		res[i] = item
+		i++
+	}
+	return res
+}
