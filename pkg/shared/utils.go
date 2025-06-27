@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 )
 
 func getBody(link string) (content []byte, err error) {
@@ -38,17 +39,11 @@ func FetchContent(link string) (content []byte, err error) {
 }
 
 func Compact[T comparable](list []T) []T {
-	m := make(map[T]bool)
+	var res []T
 	for _, item := range list {
-		if found, _ := m[item]; !found {
-			m[item] = true
+		if !slices.Contains(res, item) {
+			res = append(res, item)
 		}
-	}
-
-	i, res := 0, make([]T, len(m))
-	for item := range m {
-		res[i] = item
-		i++
 	}
 	return res
 }
