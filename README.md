@@ -8,7 +8,9 @@
 - **No virtual DOM, no re-renders**, no extra calls, no extra bundle size. The DOM is already there.
 - **No mixed client-server code**, no headaches.
 
+
 ## 1. Installation
+
 
 ### Stable release
 For a more stable release you can take a look at the [latest release](https://github.com/DazFather/Wednesday/releases) available on github.
@@ -76,8 +78,10 @@ To verify everything is in place, simply serve it using `wed serve` and visit `h
 ## 3. Writing a component
 You can create a component by creating a file ending with `.wed.html` in any subdirectory of your project. In this file, you can specify the following top-level tags:
 
+
 ### `<style>`
 This will host your CSS styles scoped for this component only (`.my-component-name.wed-component`). All `.wed-component` have a `display: content;`
+
 
 ### `<html>`
 Within the `<html>` tag, you can put the HTML structure of your component. This will be wrapped in a `<div class="my-component-name wed-component">`.
@@ -86,9 +90,11 @@ Within the `<html>` tag, you can put the HTML structure of your component. This 
 
 Let's see how to use them in some practical examples:
 
+
 #### Invoking a component
 The first scenario where the template system is useful is when we want to use a component.
 To do this, we can simply use `{{ use "my-component-name" }}`, and the content of the HTML for the specified component will be inserted there.
+
 
 #### Passing values between templates
 You can also pass a list of values between templates by using the provided `args` function. For example:
@@ -110,6 +116,7 @@ You can also pass a list of values between templates by using the provided `args
 <html>
 ```
 > `child.wed.html`
+
 
 #### Defining ~~snippets~~ inner templates
 Another useful feature from the templating language is the ability to define additional templates that can be used inside and outside your components.
@@ -136,6 +143,7 @@ Another useful feature from the templating language is the ability to define add
 ```
 > `child.wed.html`
 
+
 #### Dynamic templates
 Sometimes web pages need to add components dynamically, such as when a user click on a button or after an HTTP call.
 Wednesday gots you cover, simply add the attribute `type="dynamic"` to the html tag
@@ -152,11 +160,13 @@ At this point by manipulating the DOM in the standard way is possible to insert 
 
 A dynamic template can include static templates, share datas and snippets with others and do all other action allowed by the template engine
 
+
 ### `<script>`
 Here you can add JavaScript logic that will run once the page is fully loaded (`defer`). 
 This script is shared across all components, giving access to helpful utilities that WED provides to enhance component reactivity.
 The import order of the components is currently alphabetical based on the file name but it might change in the future.
 If a component script require some definitions form another one it's possible to use the _require_ attribute giving as value a space-spareted components name (without the file extension)
+
 
 #### useDisplay
 When you want to update text on the screen:
@@ -170,6 +180,7 @@ When you want to update text on the screen:
 </script>
 ```
 > `app.wed.html`
+
 
 #### useEffect
 Runs a callback whenever the value changes:
@@ -187,9 +198,11 @@ Runs a callback whenever the value changes:
 ```
 > `app.wed.html`
 
+
 #### useMirror
 _A sibling of useDisplay_, it provides controlled access to properties of a DOM element, allowing you to specify one or a list of properties.
 This can prevent accident where, especially on large codebases, a person might change the value of something is not supposed to.
+
 
 #### useBinds
 Binds properties between elements and an object, updating them in response to changes.
@@ -230,6 +243,7 @@ A more complete example below:
 </script>
 ```
 > `app.wed.html`
+
 
 #### useTemplate
 Retrieves a template by it's id and provides methods to facilitate content insertion into the DOM upon initialization.
@@ -297,11 +311,13 @@ wed build
 The command will output on terminal the relative path to the directory containing the "index.html"
 You can now open this file with your browser and everything should be working! No server needed _(well unless you actually do needed it)_
 
+
 ### Organizing components and assets
 Arrange your components files however suits your needs. As stated previously the build process is recursive.
 > You might for example store your components in a `/components` folder. Or in any other way, Wednesday doesn't really care
 
-For the assets, you can put them wherever you want on the _HomeDir_ specified in your settings file. Again the choice is yours
+For the assets, you can put them wherever you want on the __output_dir__ specified in your settings file. Again the choice is yours
+
 
 ### Handle directories and settings
 But what if you want to edit the way your build is generated or specify the input directory, you can customize them using the JSON settings file:
@@ -406,4 +422,7 @@ wed run <command>
 
 This setup lets you automate and customize your project’s workflows with ease.
 
+
+### Github workflow integration
+You can easily integrates wed in your github workflow by simply using this simple [github action](https://github.com/DazFather/Wednesday/tree/main/.github/actions/wed-build).
 
