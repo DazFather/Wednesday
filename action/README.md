@@ -7,7 +7,7 @@ This GitHub Action downloads the `wed` binary (for Linux, macOS, or Windows), se
 ## Usage
 
 ```yaml
-uses: DazFather/Wednesday/.github/actions/wed-build@v.1.0.0-alpha.8
+uses: DazFather/Wednesday@v.1.0.0-alpha.8
 with:
   flags: --settings my/path/to/settings.json   # Optional. Flags to pass to `wed build`
 ````
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: DazFather/Wednesday/.github/actions/wed-build@v.1.0.0-alpha.8
+      - uses: DazFather/Wednesday@v.1.0.0-alpha.8
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

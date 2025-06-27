@@ -424,5 +424,5 @@ This setup lets you automate and customize your project’s workflows with ease.
 
 
 ### Github workflow integration
-You can easily integrates wed in your github workflow by simply using this simple [github action](https://github.com/DazFather/Wednesday/tree/main/.github/actions/wed-build).
+You can easily integrates wed in your github workflow by simply using this simple [github action](./action).
 
