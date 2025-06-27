@@ -9,7 +9,6 @@ This GitHub Action downloads the `wed` binary (for Linux, macOS, or Windows), se
 ```yaml
 uses: DazFather/Wednesday/.github/actions/wed-build@v.1.0.0-alpha.8
 with:
-  version: v.1.0.0-alpha.8                     # Optional. Defaults to the latest release
   flags: --settings my/path/to/settings.json   # Optional. Flags to pass to `wed build`
 ````
 
@@ -52,10 +51,9 @@ jobs:
 
 ## Inputs
 
-| Name      | Description                                | Default  |
-| --------- | ------------------------------------------ | -------- |
-| `version` | The release tag to install (e.g. `v1.2.3`) | *Latest* |
-| `flags`   | Flags passed to the `wed build` command    | `""`     |
+The only allowed input is `flags` that allows you to pass whatever you need to the wed build command,
+you might want to use it if your project settings file is not on the root directory or has a non-default name.
+The input is totally optional.
 
 ---
 
