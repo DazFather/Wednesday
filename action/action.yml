@@ -1,9 +1,9 @@
-name: Wednesday Build
+name: wed-build
 author: DazFather
-description: Build a static site using the `wed` CLI
+description: "Build a static site using the wed CLI"
 branding:
   icon: 'skip-forward'
-  color: 'orange'
+  color: 'purple'
 
 inputs:
   flags:
@@ -51,10 +51,10 @@ runs:
         echo "ext=$EXT" >> "$GITHUB_OUTPUT"
         echo "filename=$FILENAME" >> "$GITHUB_OUTPUT"
 
-    - name: Download wed v.1.0.0-alpha.8
+    - name: Download wed v1.0.0-alpha.8
       shell: bash
       run: |
-        URL="https://github.com/DazFather/Wednesday/releases/download/v.1.0.0-alpha.8/${{ steps.platform.outputs.filename }}"
+        URL="https://github.com/DazFather/Wednesday/releases/download/v1.0.0-alpha.8/${{ steps.platform.outputs.filename }}"
         echo "Downloading $URL"
         curl -sSL "$URL" -o "wed-archive.${{ steps.platform.outputs.ext }}"
 
