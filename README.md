@@ -424,5 +424,5 @@ This setup lets you automate and customize your project’s workflows with ease.
 
 
 ### Github workflow integration
-You can easily integrates wed in your github workflow by simply using this simple [github action](./action).
+You can easily integrates wed in your github workflow by simply using this simple [github action](./wed-build).
 
