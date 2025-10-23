@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"io"
 	"strings"
-	"sync"
 
 	util "github.com/DazFather/Wednesday/pkg/shared"
 )
@@ -48,11 +47,7 @@ func (td *TemplateData) newPage(name string) *page {
 }
 
 func (p *page) Execute(w io.Writer, data any) error {
-	var (
-		raw                       strings.Builder
-		scripts, styles, dynamics []string
-		wg                        sync.WaitGroup
-	)
+	var raw strings.Builder
 
 	// Run first template engine
 	for _, c := range (*p.collected).Templates() {
@@ -62,71 +57,159 @@ func (p *page) Execute(w io.Writer, data any) error {
 		return err
 	}
 
-	// Dependency check and collect imports
-	if names := util.HasCircularDep(p.deps); len(names) > 0 {
-		return fmt.Errorf("detected circular dependency in: %s", strings.Join(names, ", "))
+	// Run second template engine to apply imports
+	templ, err := p.importTemplate()
+	if err == nil {
+		if _, err = templ.Parse(raw.String()); err == nil {
+			err = templ.Execute(w, p)
+		}
+	}
+	return err
+}
+
+func (p *page) genImportDynamic(dynamics []string) func() template.HTML {
+	if len(dynamics) == 0 {
+		return func() template.HTML { return "" }
 	}
 
-	usingECMA := p.Module == ecmaModule
+	return func() template.HTML {
+		s := new(strings.Builder)
+		for _, name := range util.Compact(dynamics) {
+			p.ExecuteTemplate(s, "wed-dynamic-"+name, p)
+		}
+		return template.HTML(s.String())
+	}
+}
+
+func (p *page) genImportStyle(styles []string) (func() template.HTML, error) {
+	var tags string = p.StyleTag("wed-style")
+
+	styles, err := p.minifyCSS(p.Name(), util.Compact(styles))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, name := range styles {
+		tags += p.StyleTag(name)
+	}
+
+	return func() template.HTML { return template.HTML(tags) }, nil
+}
+
+func (p *page) genImportScript(components []*Component) (func() template.HTML, error) {
+	var (
+		scripts, modules, deferred []string
+		tags                       = `<script type="text/javascript" src="` + p.ScriptURL("wed-utils") + `"></script>`
+	)
+
+	for _, c := range components {
+		modType := p.Module
+		if c.Module != nil {
+			modType = *c.Module
+		}
+
+		switch modType {
+		case "", noModule:
+			scripts = append(scripts, p.ScriptTag(c.Name, !c.Preload, c.Module))
+		case "ecma", ecmaModule:
+			if c.Entry {
+				modules = append(modules, p.ScriptPath(c.Name))
+				if c.Preload {
+					deferred = append(deferred, c.Name)
+				}
+			}
+		}
+	}
+
+	if len(scripts) > 0 {
+		for _, tag := range util.Compact(scripts) {
+			tags += tag
+		}
+	}
+
+	modules, err := p.minifyJS(p.Name(), modules)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(modules) > 0 {
+		mod := ecmaModule
+		tags += `<script type="importmap">{ "imports": {
+			"@wed/utils": "/` + p.ScriptURL("wed-utils.mjs") + `",
+			"@wed/http": "/` + p.ScriptURL("wed-http.mjs") + `"
+		}}</script>`
+		for _, name := range util.Compact(modules) {
+			def := false
+			for i := range deferred {
+				if name == deferred[i] {
+					def = true
+					break
+				}
+			}
+			tags += p.ScriptTag(name, def, &mod)
+		}
+	}
+
+	return func() template.HTML { return template.HTML(tags) }, nil
+}
+
+func (p *page) importTemplate() (*template.Template, error) {
+	var (
+		scripts                   []*Component
+		styles, dynamics          []string
+		importStyle, importScript func() template.HTML
+	)
+
+	// Dependency check and collect imports
+	if names := util.HasCircularDep(p.deps); len(names) > 0 {
+		return nil, fmt.Errorf("detected circular dependency in: %s", strings.Join(names, ", "))
+	}
 
 	for _, dep := range util.Inverse(p.deps) {
 		c := dep.Data
 		if c.Script != "" {
-			modType := p.Module
-			if c.Module != nil {
-				if modType = *c.Module; !usingECMA && modType == ecmaModule {
-					usingECMA = true
-				}
-			}
-			if modType == noModule || c.Entry {
-				scripts = append(scripts, p.ScriptTag(c.Name, !c.Preload, c.Module))
-			}
+			scripts = append(scripts, &c)
 		}
 		if c.Style != "" {
-			styles = append(styles, p.StyleURL(c.Name))
+			styles = append(styles, p.StylePath(c.Name))
 		}
 		if c.Type != static {
 			dynamics = append(dynamics, c.Name)
 		}
 	}
-	wg.Add(3)
-	go func() { scripts = util.Compact(scripts); wg.Done() }()
-	go func() { styles = util.Compact(styles); wg.Done() }()
-	go func() { dynamics = util.Compact(dynamics); wg.Done() }()
-	wg.Wait()
 
-	// Run second template engine to apply imports
-	templ, err := template.New(p.Template.Name()).Delims("{!import{", "}!}").Funcs(template.FuncMap{
-		"dynamics": func() template.HTML {
-			s := new(strings.Builder)
-			for _, name := range dynamics {
-				p.ExecuteTemplate(s, "wed-dynamic-"+name, p)
-			}
-			return template.HTML(s.String())
-		},
-		"styles": func() template.HTML {
-			s := `<link rel="stylesheet" href="` + p.StyleURL("wed-style") + `" />`
-			for _, style := range styles {
-				s += `<link rel="stylesheet" href="` + style + `"/>` + "\n"
-			}
-			return template.HTML(s)
-		},
-		"scripts": func() template.HTML {
-			s := `<script type="text/javascript" src="` + p.ScriptURL("wed", "utils") + `"></script>`
-			if usingECMA {
-				s += `<script type="importmap">{ "imports": {
-					"@wed/utils": "/` + p.ScriptURL("wed", "utils.mjs") + `",
-					"@wed/http": "/` + p.ScriptURL("wed", "http.mjs") + `"
-				}}</script>`
-			}
-			return template.HTML(s + "\n" + strings.Join(scripts, "\n"))
-		},
-	}).Parse(raw.String())
+	var errch = make(chan error, 2)
 
-	if err == nil {
-		err = templ.Execute(w, p)
+	go func() {
+		var err error
+		importStyle, err = p.genImportStyle(styles)
+		errch <- err
+	}()
+
+	go func() {
+		var err error
+		importScript, err = p.genImportScript(scripts)
+		errch <- err
+	}()
+
+	importDynamic := p.genImportDynamic(dynamics)
+	if err := <-errch; err != nil {
+		return nil, err
 	}
-	return err
+	if err := <-errch; err != nil {
+		return nil, err
+	}
+	close(errch)
+
+	templ := template.New(p.Name()).
+		Delims("{!import{", "}!}").
+		Funcs(template.FuncMap{
+			"dynamics": importDynamic,
+			"styles":   importStyle,
+			"scripts":  importScript,
+		})
+
+	return templ, nil
 }
 
 func (p *page) getVar(name string, def ...any) (any, error) {
