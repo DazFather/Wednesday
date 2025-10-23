@@ -15,6 +15,11 @@ wed \- static site builder and component manager for the Wednesday framework
 Compile the project into a static site. Treats all \fI.wed.html\fR as components and \fI.tmpl\fR as pages.
 The cli will look recursively in all the project directories.
 Results will be generated on the output directory. 
+.TP
+.B Options:
+.TP
+\fB\-\-mini\fR
+Minify all styles and all suitables scripts of all components for each page into single <page>-mini.css and <page>-mini.js files.
 
 .TP
 .B init [directory]
@@ -25,6 +30,9 @@ Create a default project in the specified directory. If not provided, the curren
 Build and serve the project statically via HTTP.
 .TP
 .B Options:
+.TP
+\fB\-\-mini\fR
+Minify all styles and all suitables scripts of all components for each page into single <page>-mini.css and <page>-mini.js files.
 .TP
 \fB\-l\fR, \fB\-\-live\fR
 Enable automatic rebuilding on detected changes or at specified time interval.

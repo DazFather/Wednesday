@@ -86,6 +86,7 @@ func mainUsage() {
 Commands:
 
 `, magenta.Paint(" build "), `Compile the project into a static site
+   --`, cyan.Paint("mini"), ` minify each site page styles and scripts into single import
 
 `, magenta.Paint(" init "), `Generate a default project `, gray.Embed(`
    [`, cyan.Paint("mount"), `] directory to put the project into`), `
@@ -193,7 +194,14 @@ The output will be located at 'output_dir' ('./build' by default). In the specif
   JS scripts into 'script' subdirectory
 All the pages at the top level inside 'output_dir'
 
-`, flagsUsage())
+
+Command flags:`, gray.Embed(`
+
+  --`, cyan.Paint("mini"), ` Minify all styles and all suitables scripts of all components
+   used by each page into single <page>-mini.css and <page>-mini.js files.
+   By default only component generated files are minified and bundled by themselfs
+
+`), flagsUsage())
 
 }
 

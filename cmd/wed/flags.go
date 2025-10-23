@@ -85,6 +85,7 @@ func serveFlags() {
 	f.StringVar(&settings.port, "p", ":8080", "shorthand for 'port'")
 	f.BoolFunc("live", "reload server each time interval", settings.parseLiveFlag)
 	f.BoolFunc("l", "shorthand for 'live'", settings.parseLiveFlag)
+	minify := f.Bool("mini", false, "minify each page styles and scripts")
 
 	parseDefault(f, os.Args[2:], serveUsage)
 
@@ -92,8 +93,9 @@ func serveFlags() {
 	if len(settings.port) > 0 && settings.port[0] != ':' {
 		settings.port = ":" + settings.port
 	}
-
-	return
+	if minify != nil {
+		settings.Minify = *minify
+	}
 }
 
 func initFlags() {
@@ -109,12 +111,15 @@ func initFlags() {
 }
 
 func buildFlags() {
-	parseDefault(
-		flag.NewFlagSet("build", flag.ExitOnError),
-		os.Args[2:],
-		buildUsage,
-	)
+	var f = flag.NewFlagSet("build", flag.ExitOnError)
 
+	minify := f.Bool("mini", false, "minify each page styles and scripts")
+
+	parseDefault(f, os.Args[2:], buildUsage)
+
+	if minify != nil {
+		settings.Minify = *minify
+	}
 }
 
 func runFlags() {

@@ -44,7 +44,11 @@ func (s Settings) minifyJS(page string, entries []string) ([]string, error) {
 		LogLevel: api.LogLevelWarning,
 	}
 
+	if s.Minify {
+		opt.Outfile = s.ScriptPath(page + "-mini")
+	} else {
 		opt.Outdir = s.ScriptPath()
+	}
 
 	res := api.Build(opt)
 
@@ -54,6 +58,9 @@ func (s Settings) minifyJS(page string, entries []string) ([]string, error) {
 			errs[i] = errors.New(res.Errors[i].Text)
 		}
 		spec := "global"
+		if s.Minify {
+			spec = "single file"
+		}
 		return nil, fmt.Errorf("%d esbuild errors douring %s JS minification of page %s: %w", size, spec, page, errors.Join(errs...))
 	}
 
@@ -79,7 +86,11 @@ func (s Settings) minifyCSS(page string, entries []string) ([]string, error) {
 		LogLevel:         api.LogLevelWarning,
 	}
 
+	if s.Minify {
+		opt.Outfile = s.StylePath(page + "-mini")
+	} else {
 		opt.Outdir = s.StylePath()
+	}
 
 	res := api.Build(opt)
 
@@ -90,6 +101,9 @@ func (s Settings) minifyCSS(page string, entries []string) ([]string, error) {
 		}
 
 		spec := "global"
+		if s.Minify {
+			spec = "single file"
+		}
 		return nil, fmt.Errorf("%d esbuild errors douring CSS %s minification of page %s: %w", size, spec, page, errors.Join(errs...))
 	}
 
