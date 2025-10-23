@@ -22,11 +22,11 @@ type FileSettings struct {
 
 type FlagSettings struct {
 	reload *time.Duration
+	port   string
+	name   string
+	tags   string
+	arg    string
 	FileSettings
-	port     string
-	name     string
-	tags     string
-	arg      string
 	download bool
 	quiet    bool
 }
@@ -34,14 +34,14 @@ type FlagSettings struct {
 var settings FlagSettings
 
 // NewSettingsFromJSON creates a new Settings instance from a JSON string.
-func NewSettingsFromJSON(path string) (s FileSettings, err error) {
-	s = FileSettings{path, engine.Settings{
+func NewSettingsFromJSON(spath string) (s FileSettings, err error) {
+	s = FileSettings{spath, engine.Settings{
 		OutputDir: "build",
 		InputDir:  ".",
 		Module:    "text/javascript",
 	}}
 
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(spath)
 	if err != nil {
 		return
 	}
@@ -106,8 +106,6 @@ func initFlags() {
 	if settings.arg != "" {
 		settings.InputDir, settings.OutputDir = settings.arg, filepath.Join(settings.arg, settings.OutputDir)
 	}
-
-	return
 }
 
 func buildFlags() {
@@ -117,7 +115,6 @@ func buildFlags() {
 		buildUsage,
 	)
 
-	return
 }
 
 func runFlags() {
@@ -126,8 +123,6 @@ func runFlags() {
 		os.Args[2:],
 		runUsage,
 	)
-
-	return
 }
 
 func libUseFlag(args []string) {
@@ -136,8 +131,6 @@ func libUseFlag(args []string) {
 		args,
 		libUseUsage,
 	)
-
-	return
 }
 
 func libTrustFlag(args []string) {
@@ -157,8 +150,6 @@ func libTrustFlag(args []string) {
 			settings.name = cutExt(filepath.Base(settings.arg))
 		}
 	}
-
-	return
 }
 
 func libUntrustFlag(args []string) {
@@ -167,8 +158,6 @@ func libUntrustFlag(args []string) {
 		args,
 		libUntrustUsage,
 	)
-
-	return
 }
 
 func libSearchFlag(args []string) {
@@ -186,8 +175,6 @@ func libSearchFlag(args []string) {
 			settings.tags = "(?i)" + settings.tags
 		}
 	}
-
-	return
 }
 
 func helpFlags() {
@@ -202,8 +189,6 @@ func helpFlags() {
 	}
 
 	settings.name, settings.arg = f.Arg(0), f.Arg(1)
-
-	return
 }
 
 func parseDefault(f *flag.FlagSet, args []string, usage func()) {
@@ -228,6 +213,4 @@ func parseDefault(f *flag.FlagSet, args []string, usage func()) {
 	if settings.arg == "" {
 		settings.arg = f.Arg(0)
 	}
-
-	return
 }

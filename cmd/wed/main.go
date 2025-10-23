@@ -30,9 +30,9 @@ var (
 func doInit() (err error) {
 	m := map[string][]byte{
 		settings.StylePath("wed-style"):                defStyleContent,
-		settings.ScriptPath("wed", "utils.js"):         defScriptContent,
-		settings.ScriptPath("wed", "utils.mjs"):        defScriptModuleContent,
-		settings.ScriptPath("wed", "http.mjs"):         defHttpScriptModuleContent,
+		settings.ScriptPath("wed-utils.js"):            defScriptContent,
+		settings.ScriptPath("wed-utils.mjs"):           defScriptModuleContent,
+		settings.ScriptPath("wed-http.mjs"):            defHttpScriptModuleContent,
 		filepath.Join(settings.InputDir, "index.tmpl"): indexTemplate,
 	}
 

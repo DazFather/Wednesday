@@ -86,6 +86,10 @@ func (s Settings) ScriptURL(elem ...string) string {
 	return link
 }
 
+func (s Settings) StyleTag(name string) string {
+	return `<link rel="stylesheet" href="` + s.StyleURL(name) + `" />`
+}
+
 func (s Settings) ScriptTag(name string, deferred bool, overrideModule *ModuleType) string {
 	d := ""
 	if deferred {
