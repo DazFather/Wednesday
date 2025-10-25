@@ -98,8 +98,14 @@ func (p *page) genImportStyle(styles []string) (func() template.HTML, error) {
 
 func (p *page) genImportScript(components []*Component) (func() template.HTML, error) {
 	var (
-		scripts, modules, deferred []string
-		tags                       = `<script type="text/javascript" src="` + p.ScriptURL("wed-utils") + `"></script>`
+		scripts, preScripts []string
+		modules, preModules []string
+		tags                = `
+<script type="text/javascript" src="` + p.ScriptURL("wed-utils") + `"></script>
+<script type="importmap">{ "imports": {
+	"@wed/utils": "/` + p.ScriptURL("wed-utils.mjs") + `",
+	"@wed/http": "/` + p.ScriptURL("wed-http.mjs") + `"
+}}</script>`
 	)
 
 	for _, c := range components {
@@ -110,44 +116,51 @@ func (p *page) genImportScript(components []*Component) (func() template.HTML, e
 
 		switch modType {
 		case "", noModule:
-			scripts = append(scripts, p.ScriptTag(c.Name, !c.Preload, c.Module))
+			if c.Preload {
+				preScripts = append(preScripts, p.ScriptPath(c.Name))
+			} else {
+				scripts = append(scripts, p.ScriptPath(c.Name))
+			}
 		case "ecma", ecmaModule:
 			if c.Entry {
-				modules = append(modules, p.ScriptPath(c.Name))
 				if c.Preload {
-					deferred = append(deferred, c.Name)
+					preModules = append(preModules, p.ScriptPath(c.Name))
+				} else {
+					modules = append(modules, p.ScriptPath(c.Name))
 				}
 			}
 		}
 	}
 
 	if len(scripts) > 0 {
-		for _, tag := range util.Compact(scripts) {
-			tags += tag
+		tag, err := p.minifyJS(p.Name(), noModule, util.Compact(scripts), true)
+		if err != nil {
+			return nil, err
 		}
+		tags += tag
 	}
-
-	modules, err := p.minifyJS(p.Name(), modules)
-	if err != nil {
-		return nil, err
+	if len(preScripts) > 0 {
+		tag, err := p.minifyJS(p.Name(), noModule, util.Compact(preScripts), false)
+		if err != nil {
+			return nil, err
+		}
+		tags += tag
 	}
 
 	if len(modules) > 0 {
-		mod := ecmaModule
-		tags += `<script type="importmap">{ "imports": {
-			"@wed/utils": "/` + p.ScriptURL("wed-utils.mjs") + `",
-			"@wed/http": "/` + p.ScriptURL("wed-http.mjs") + `"
-		}}</script>`
-		for _, name := range util.Compact(modules) {
-			def := false
-			for i := range deferred {
-				if name == deferred[i] {
-					def = true
-					break
-				}
-			}
-			tags += p.ScriptTag(name, def, &mod)
+		tag, err := p.minifyJS(p.Name(), ecmaModule, util.Compact(modules), true)
+		if err != nil {
+			return nil, err
 		}
+		tags += tag
+	}
+
+	if len(preModules) > 0 {
+		tag, err := p.minifyJS(p.Name(), ecmaModule, util.Compact(preModules), false)
+		if err != nil {
+			return nil, err
+		}
+		tags += tag
 	}
 
 	return func() template.HTML { return template.HTML(tags) }, nil

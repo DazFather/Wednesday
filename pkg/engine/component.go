@@ -91,7 +91,9 @@ func ParseComponent(r io.Reader) (c Component, err error) {
 			for _, attr := range block.Attrs {
 				switch attr.Key {
 				case "preload":
-					c.Preload = attr.Val == "" || strings.ToLower(attr.Val) == "true"
+					if c.Preload = attr.Val == "" || strings.ToLower(attr.Val) == "true"; c.Preload {
+						c.Entry = true
+					}
 				case "entrypoint": // TODO: find a better name
 					c.Entry = attr.Val == "" || strings.ToLower(attr.Val) == "true"
 				case "require":

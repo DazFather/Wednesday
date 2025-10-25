@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/evanw/esbuild/pkg/api"
+	esbuild "github.com/evanw/esbuild/pkg/api"
 )
 
 func splitExt(name string) (base, ext string) {
@@ -26,8 +26,8 @@ func validHTML(content string) error {
 	return dec.Decode(new(interface{}))
 }
 
-func (s Settings) minifyJS(page string, entries []string) ([]string, error) {
-	var opt = api.BuildOptions{
+func (s Settings) minifyJS(page string, mod ModuleType, entries []string, deferred bool) (string, error) {
+	var opt = esbuild.BuildOptions{
 		EntryPoints:       entries,
 		Bundle:            true,
 		Write:             true,
@@ -35,22 +35,34 @@ func (s Settings) minifyJS(page string, entries []string) ([]string, error) {
 		MinifyIdentifiers: true,
 		MinifySyntax:      true,
 		AllowOverwrite:    true,
-		Format:            api.FormatESModule,
-		Sourcemap:         api.SourceMapLinked,
+		Sourcemap:         esbuild.SourceMapLinked,
 		Alias: map[string]string{
 			"@wed/utils": "./" + filepath.ToSlash(s.ScriptPath("wed-utils.mjs")),
 			"@wed/http":  "./" + filepath.ToSlash(s.ScriptPath("wed-http.mjs")),
 		},
-		LogLevel: api.LogLevelWarning,
+		LogLevel: esbuild.LogLevelWarning,
 	}
 
-	if s.Minify {
-		opt.Outfile = s.ScriptPath(page + "-mini")
-	} else {
-		opt.Outdir = s.ScriptPath()
+	switch mod {
+	case ecmaModule:
+		opt.Format = esbuild.FormatESModule
+		if s.Minify {
+			opt.Outfile = s.ScriptPath(page + "-ecma-mini")
+		} else {
+			opt.Outdir = s.ScriptPath()
+		}
+	case noModule:
+		opt.Format = esbuild.FormatDefault
+		if s.Minify {
+			opt.Outfile = s.ScriptPath(page + "-mini")
+		} else {
+			opt.Bundle = false
+			opt.Alias = nil
+			opt.Outdir = s.ScriptPath()
+		}
 	}
 
-	res := api.Build(opt)
+	res := esbuild.Build(opt)
 
 	if size := len(res.Errors); size > 0 {
 		errs := make([]error, size)
@@ -61,29 +73,30 @@ func (s Settings) minifyJS(page string, entries []string) ([]string, error) {
 		if s.Minify {
 			spec = "single file"
 		}
-		return nil, fmt.Errorf("%d esbuild errors douring %s JS minification of page %s: %w", size, spec, page, errors.Join(errs...))
+		return "", fmt.Errorf("%d esbuild errors douring %s JS minification of page %s: %w", size, spec, page, errors.Join(errs...))
 	}
 
-	var output []string
+	var output strings.Builder
 	for _, f := range res.OutputFiles {
-		if name := filepath.Base(f.Path); strings.ToLower(filepath.Ext(name)) == ".js" {
-			output = append(output, name)
+		if name := filepath.Base(f.Path); strings.ToLower(filepath.Ext(name)) != ".map" {
+			output.WriteString(s.ScriptTag(name, deferred, &mod))
 		}
 	}
 
-	return output, nil
+	return output.String(), nil
 }
 
 func (s Settings) minifyCSS(page string, entries []string) ([]string, error) {
-	var opt = api.BuildOptions{
-		EntryPoints:      entries,
-		Bundle:           true,
-		Write:            true,
-		MinifyWhitespace: true,
-		MinifySyntax:     true,
-		AllowOverwrite:   true,
-		Sourcemap:        api.SourceMapLinked,
-		LogLevel:         api.LogLevelWarning,
+	var opt = esbuild.BuildOptions{
+		EntryPoints:       entries,
+		Bundle:            true,
+		Write:             true,
+		MinifyWhitespace:  true,
+		MinifyIdentifiers: true,
+		MinifySyntax:      true,
+		AllowOverwrite:    true,
+		Sourcemap:         esbuild.SourceMapLinked,
+		LogLevel:          esbuild.LogLevelWarning,
 	}
 
 	if s.Minify {
@@ -92,7 +105,7 @@ func (s Settings) minifyCSS(page string, entries []string) ([]string, error) {
 		opt.Outdir = s.StylePath()
 	}
 
-	res := api.Build(opt)
+	res := esbuild.Build(opt)
 
 	if size := len(res.Errors); size > 0 {
 		errs := make([]error, size)
