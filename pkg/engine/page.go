@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"slices"
 	"strings"
 
 	util "github.com/DazFather/Wednesday/pkg/shared"
@@ -100,12 +101,7 @@ func (p *page) genImportScript(components []*Component) (func() template.HTML, e
 	var (
 		scripts, preScripts []string
 		modules, preModules []string
-		tags                = `
-<script type="text/javascript" src="` + p.ScriptURL("wed-utils") + `"></script>
-<script type="importmap">{ "imports": {
-	"@wed/utils": "/` + p.ScriptURL("wed-utils.mjs") + `",
-	"@wed/http": "/` + p.ScriptURL("wed-http.mjs") + `"
-}}</script>`
+		tags                = `<script type="text/javascript" src="` + p.ScriptURL("wed-utils") + `"></script>`
 	)
 
 	for _, c := range components {
@@ -114,33 +110,33 @@ func (p *page) genImportScript(components []*Component) (func() template.HTML, e
 			modType = *c.Module
 		}
 
+		spath := p.ScriptPath(c.Name)
 		switch modType {
 		case "", noModule:
-			if c.Preload {
-				preScripts = append(preScripts, p.ScriptPath(c.Name))
-			} else {
-				scripts = append(scripts, p.ScriptPath(c.Name))
+			if scripts = append(scripts, spath); c.Preload {
+				preScripts = append(preScripts, spath)
 			}
 		case "ecma", ecmaModule:
 			if c.Entry {
-				if c.Preload {
-					preModules = append(preModules, p.ScriptPath(c.Name))
-				} else {
-					modules = append(modules, p.ScriptPath(c.Name))
+				if modules = append(modules, spath); c.Preload {
+					preModules = append(preModules, spath)
 				}
 			}
 		}
 	}
 
 	if len(scripts) > 0 {
-		tag, err := p.minifyJS(p.Name(), noModule, util.Compact(scripts), true)
-		if err != nil {
-			return nil, err
+		var def func(n string) bool
+		switch preScripts = util.Compact(preScripts); len(preScripts) {
+		case 0:
+			def = func(n string) bool { return true }
+		case 1:
+			def = func(n string) bool { return n != preScripts[0] }
+		default:
+			def = func(n string) bool { return !slices.Contains(preScripts, n) }
 		}
-		tags += tag
-	}
-	if len(preScripts) > 0 {
-		tag, err := p.minifyJS(p.Name(), noModule, util.Compact(preScripts), false)
+
+		tag, err := p.minifyJS(p.Name(), noModule, util.Compact(scripts), def)
 		if err != nil {
 			return nil, err
 		}
@@ -148,19 +144,24 @@ func (p *page) genImportScript(components []*Component) (func() template.HTML, e
 	}
 
 	if len(modules) > 0 {
-		tag, err := p.minifyJS(p.Name(), ecmaModule, util.Compact(modules), true)
-		if err != nil {
-			return nil, err
+		var def func(n string) bool
+		switch preModules = util.Compact(preModules); len(preModules) {
+		case 0:
+			def = func(n string) bool { return true }
+		case 1:
+			def = func(n string) bool { return n != preModules[0] }
+		default:
+			def = func(n string) bool { return !slices.Contains(preModules, n) }
 		}
-		tags += tag
-	}
 
-	if len(preModules) > 0 {
-		tag, err := p.minifyJS(p.Name(), ecmaModule, util.Compact(preModules), false)
+		tag, err := p.minifyJS(p.Name(), ecmaModule, util.Compact(modules), def)
 		if err != nil {
 			return nil, err
 		}
-		tags += tag
+		tags += `<script type="importmap">{ "imports": {
+	"@wed/utils": "/` + p.ScriptURL("wed-utils.mjs") + `",
+	"@wed/http": "/` + p.ScriptURL("wed-http.mjs") + `"
+}}</script>` + tag
 	}
 
 	return func() template.HTML { return template.HTML(tags) }, nil

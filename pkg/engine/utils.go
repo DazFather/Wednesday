@@ -26,7 +26,7 @@ func validHTML(content string) error {
 	return dec.Decode(new(interface{}))
 }
 
-func (s Settings) minifyJS(page string, mod ModuleType, entries []string, deferred bool) (string, error) {
+func (s Settings) minifyJS(page string, mod ModuleType, entries []string, defers func(string) bool) (string, error) {
 	var opt = esbuild.BuildOptions{
 		EntryPoints:       entries,
 		Bundle:            true,
@@ -79,7 +79,7 @@ func (s Settings) minifyJS(page string, mod ModuleType, entries []string, deferr
 	var output strings.Builder
 	for _, f := range res.OutputFiles {
 		if name := filepath.Base(f.Path); strings.ToLower(filepath.Ext(name)) != ".map" {
-			output.WriteString(s.ScriptTag(name, deferred, &mod))
+			output.WriteString(s.ScriptTag(name, defers(name), &mod))
 		}
 	}
 
