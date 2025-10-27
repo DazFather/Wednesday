@@ -1,3 +1,40 @@
+/* --- Theming --- */
+
+:root {
+    color-scheme: light dark;
+    --color-bg: whitesmoke;
+    --color-bg-alt: #d0d0d0;
+    --color-text: #333333;
+    --color-text-alt: #444444;
+    --color-accent: purple;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-bg: #333333;
+        --color-bg-alt: #444444;
+        --color-text: whitesmoke;
+        --color-text-alt: #d0d0d0;
+    }
+}
+
+:root:has(#theme-switcher [value="light"]:checked) {
+    color-scheme: light;
+    --color-bg: whitesmoke;
+    --color-bg-alt: #d0d0d0;
+    --color-text: #333333;
+    --color-text-alt: #444444;
+}
+
+:root:has(#theme-switcher [value="dark"]:checked) {
+    color-scheme: dark;
+    --color-bg: #333333;
+    --color-bg-alt: #444444;
+    --color-text: whitesmoke;
+    --color-text-alt: #d0d0d0;
+}
+
+/* --- CSS normalization --- */
+
 html, body {
     margin: 0;
     padding: 0;

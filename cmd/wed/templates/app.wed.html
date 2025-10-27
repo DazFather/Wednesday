@@ -1,16 +1,18 @@
 <style>
 	/* you can declared properties here */
-	color: whitesmoke;
 	font-size: 1.75em;
+	padding: 0.5em;
+	display: block;
+	height: 100%;
+	background-image: linear-gradient(
+		45deg,
+		light-dark(hsl(0, 100%, 55%),   hsl(0, 100%, 35%)),
+		light-dark(hsl(180, 100%, 55%), hsl(180, 100%, 35%))
+	);
 
 	.cover {
-		min-height: 100vh;
-		min-width: 100vw;
-		background-image: linear-gradient(
-			45deg,
-			hsl(0, 100%, 50%),
-			hsl(180, 100%, 50%)
-		);
+		flex-direction: column;
+		height: calc(100% - 1.5em);
 		gap: 2em;
 	}
 
@@ -25,25 +27,32 @@
 		max-width: 40ch;
 		margin: 0 auto;
 		gap: 0.5em;
+		flex-direction: column;
 
 		input[type="text"] {
 			font-size: 0.75em;
 			border: none;
-			outline: none;
+			outline-color: transparent;
 			padding: 0.25em 0.5em;
 			border-radius: 0.5em;
-			background-color: hsla(0, 0%, 100%, 0.5);
 		}
 	}
 
-	/* 'flex-center' (and 'inline-flex-center') is a class provided by the default
-		inside wed-style.css with CSS normalization */
-	.flex-center {
+	.theme-switcher {
+		font-size: 0.5em;
 		flex-direction: column;
 	}
-
 </style>
 <html>
+	<!-- 'flex-center' and 'inline-flex-center' are class provided by the default
+		inside wed-style.css together with CSS normalization and other goodies -->
+	<label class="inline-flex-center theme-switcher">THEME:
+		<select data-theme-switcher name="theme-switcher" id="theme-switcher">
+			<option value="system">System</option>
+			<option value="light">Light</option>
+			<option value="dark">Dark</option>
+		</select>
+	</label>
 	<div class="cover flex-center">
 		<header>
 			<!-- Example of useDisplay -->
