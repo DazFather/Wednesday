@@ -2,6 +2,7 @@
 	/* you can declared properties here */
 	font-size: 1.75em;
 	padding: 0.5em;
+	/* by default wed components have 'display: contents' but you can overrite it */
 	display: block;
 	height: 100%;
 	background-image: linear-gradient(
@@ -35,6 +36,9 @@
 			outline-color: transparent;
 			padding: 0.25em 0.5em;
 			border-radius: 0.5em;
+			/* --color-bg are theme dependent and are setted on the wes-style.css
+				that file is not ment to be untouch, so go there and change them as you wish! */
+			background-color: hsl(from var(--color-bg, whitesmoke) h s l / 0.5);
 		}
 	}
 
