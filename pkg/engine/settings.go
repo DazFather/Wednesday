@@ -73,7 +73,7 @@ func (s Settings) StyleURL(elem ...string) string {
 	if err != nil {
 		panic(err)
 	}
-	return link
+	return "/" + link
 }
 
 func (s Settings) ScriptURL(elem ...string) string {
@@ -84,7 +84,7 @@ func (s Settings) ScriptURL(elem ...string) string {
 	if err != nil {
 		panic(err)
 	}
-	return link
+	return "/" + link
 }
 
 func (s Settings) StyleTag(name string) string {

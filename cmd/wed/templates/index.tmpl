@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <!-- Each *.tmpl file will turn into a .html page by Wednesday (using the go template syntax)
 	wherever they are in the project directories, no matter the subfolder
-	this gives you freedom to organize the project as you want
+	this gives you freedom to organize the project as you want.
+	If you want to modify the output file, declare the "page" location just like so:
+	{!{ page "my/amazing/totally/different/path.html" }!}
 -->
 <html>
 	<head>
@@ -9,21 +11,21 @@
 		<meta charset="UFT-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<!-- This will imports all stylesheets of Wednesday components needed by this page
-			by default all components with a style tag will generate their relative file. 
+			by default all components with a style tag will generate their relative file.
 		-->
-		{!import{ styles }!}
+		{!{ import "styles" }!}
 		<!-- The same applies to scripts.
 			By default all JS and CSS files are minified and bundleized for better performance
 			but you can use the --mini flag on 'build' or 'serve' to generate single file imports
 		-->
-		{!import{ scripts }!}
+		{!{ import "scripts" }!}
 	</head>
 	<body>
 		<!-- This will imports all dynamic components wich are essentially template tags -->
-		{!import{ dynamics }!}
+		{!{ import "dynamics" }!}
 		<!-- 'use' lets you embeds the content of specified component at build time
 			additonally you can provide properties with 'props' or nested component with 'hold'
-		--> 
+		-->
 		{{ use "app" ( props "title" ( list "Wed" "nesday" ) ) }}
 	</body>
 </html>

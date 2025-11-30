@@ -100,15 +100,22 @@ func (td *TemplateData) buildPages(errch chan<- error) {
 		go func() {
 			defer wg.Done()
 
-			f, err := os.Create(filepath.Join(td.OutputDir, page.Name()+".html"))
+			content, err := page.Build(td)
 			if err != nil {
 				errch <- err
 				return
 			}
-			defer f.Close()
 
-			if err = page.Execute(f, td); err != nil {
+			if dir := filepath.Dir(page.Location); dir != "" {
+				if err = os.MkdirAll(filepath.Join(td.OutputDir, dir), 0755); err != nil {
+					errch <- err
+					return
+				}
+			}
+
+			if err = os.WriteFile(filepath.Join(td.OutputDir, page.Location), content, 0644); err != nil {
 				errch <- err
+				return
 			}
 		}()
 	}

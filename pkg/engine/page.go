@@ -1,9 +1,9 @@
 package engine
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
-	"io"
 	"slices"
 	"strings"
 
@@ -17,7 +17,8 @@ type page struct {
 	collected  **template.Template
 	*Settings
 	*template.Template
-	deps []ComponentDependency
+	deps     []ComponentDependency
+	Location string
 }
 
 func (td *TemplateData) newPage(name string) *page {
@@ -25,6 +26,7 @@ func (td *TemplateData) newPage(name string) *page {
 		components: &td.components,
 		Settings:   &td.Settings,
 		collected:  &td.collected,
+		Location:   name + ".html",
 	}
 	p.Template = template.New(name).Funcs(template.FuncMap{
 		"list": func(v ...any) []any { return v },
@@ -47,25 +49,26 @@ func (td *TemplateData) newPage(name string) *page {
 	return &p
 }
 
-func (p *page) Execute(w io.Writer, data any) error {
-	var raw strings.Builder
+func (p *page) Build(data any) ([]byte, error) {
+	var buf bytes.Buffer
 
 	// Run first template engine
 	for _, c := range (*p.collected).Templates() {
 		p.AddParseTree(c.Name(), c.Tree)
 	}
-	if err := p.Template.Execute(&raw, data); err != nil {
-		return err
+	if err := p.Template.Execute(&buf, data); err != nil {
+		return nil, err
 	}
 
 	// Run second template engine to apply imports
 	templ, err := p.importTemplate()
 	if err == nil {
-		if _, err = templ.Parse(raw.String()); err == nil {
-			err = templ.Execute(w, p)
+		if _, err = templ.Parse(buf.String()); err == nil {
+			buf.Reset()
+			err = templ.Execute(&buf, p)
 		}
 	}
-	return err
+	return buf.Bytes(), err
 }
 
 func (p *page) genImportDynamic(dynamics []string) func() template.HTML {
@@ -159,8 +162,8 @@ func (p *page) genImportScript(components []*Component) (func() template.HTML, e
 			return nil, err
 		}
 		tags += `<script type="importmap">{ "imports": {
-	"@wed/utils": "/` + p.ScriptURL("wed-utils.mjs") + `",
-	"@wed/http": "/` + p.ScriptURL("wed-http.mjs") + `"
+	"@wed/utils": "` + p.ScriptURL("wed-utils.mjs") + `",
+	"@wed/http": "` + p.ScriptURL("wed-http.mjs") + `"
 }}</script>` + tag
 	}
 
@@ -216,11 +219,25 @@ func (p *page) importTemplate() (*template.Template, error) {
 	close(errch)
 
 	templ := template.New(p.Name()).
-		Delims("{!import{", "}!}").
+		Delims("{!{", "}!}").
 		Funcs(template.FuncMap{
-			"dynamics": importDynamic,
-			"styles":   importStyle,
-			"scripts":  importScript,
+			"import": func(val string) (content template.HTML, err error) {
+				switch val {StyleURL
+				case "dynamics":
+					content = importDynamic()
+				case "styles":
+					content = importStyle()
+				case "scripts":
+					content = importScript()
+				default:
+					err = fmt.Errorf("invalid import: %q not supported", val)
+				}
+				return
+			},
+			"page": func(val string) error {
+				p.Location = val
+				return nil
+			},
 		})
 
 	return templ, nil

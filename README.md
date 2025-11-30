@@ -273,7 +273,7 @@ Retrieves a template by it's id and provides methods to facilitate content inser
 
 ```html
 <html>
-    {{ importDynamic "todo-item" }}
+    {{ import "dynamics" }}
     <div id="todo-list">
         <h1>TO DO LIST</h1>
         <div>
@@ -425,4 +425,3 @@ This setup lets you automate and customize your project’s workflows with ease.
 
 ### Github workflow integration
 You can easily integrates wed in your github workflow by simply using this simple [github action](./wed-build).
-
