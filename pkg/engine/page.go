@@ -222,7 +222,7 @@ func (p *page) importTemplate() (*template.Template, error) {
 		Delims("{!{", "}!}").
 		Funcs(template.FuncMap{
 			"import": func(val string) (content template.HTML, err error) {
-				switch val {StyleURL
+				switch val {
 				case "dynamics":
 					content = importDynamic()
 				case "styles":

@@ -78,10 +78,10 @@ func doServe() error {
 				case 0:
 					printlnDone("build", "Site successfully rebuilt, no error found\n")
 				case 1:
-					printlnFailed("build", "Cannot rebuild site fond:\n", errs[0])
+					printlnFailed("build", "Cannot rebuild site found:\n", errs[0])
 					printlnStackTrace(errs[0])
 				default:
-					printlnFailed("build", "Cannot rebuild site fond", len(errs), "errors:")
+					printlnFailed("build", "Cannot rebuild site found", len(errs), "errors:")
 					for i, err := range errs {
 						fmt.Println(red.Paint(i+1), err)
 						printlnStackTrace(err)
