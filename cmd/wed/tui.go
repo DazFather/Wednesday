@@ -143,6 +143,7 @@ func flagsUsage() string {
    -`, cyan.Paint("s"), ` | --`, cyan.Paint("settings"), ` Specify the path to the project settings file, by default 'wed-settings.json' will be used.
     If not exists 'build' is used as 'output_dir' and the current working directory as 'input_dir'
    -`, cyan.Paint("nc"), ` | --`, cyan.Paint("no-color"), ` Disable terminal colored output
+   -`, cyan.Paint("q"), ` | --`, cyan.Paint("quiet"), ` Suppress most of feedback messages
    -`, cyan.Paint("h"), ` | --`, cyan.Paint("help"), ` Display help and detailed usage of a specific command`), `
 `)
 
