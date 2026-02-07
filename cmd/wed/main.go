@@ -91,11 +91,10 @@ func doServe() error {
 		}()
 	}
 
+	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("./"+settings.OutputDir))))
+
 	hint("Listening at: ", gray.Paint(settings.port), "\nServing directory: ", gray.Paint(settings.OutputDir), "\n")
-	return http.ListenAndServe(
-		settings.port,
-		http.StripPrefix("/", http.FileServer(http.Dir("./"+settings.OutputDir))),
-	)
+	return http.ListenAndServe(settings.port, nil)
 }
 
 func doRun() error {

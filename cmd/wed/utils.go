@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -107,6 +109,46 @@ func watch(rootdir, builddir string, notify func() error) error {
 	return err
 }
 
+func sse(ready <-chan int) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+
+		// You may need this locally for CORS requests
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		connection, cancel := context.WithCancel(r.Context())
+
+		rc := http.NewResponseController(w)
+
+		for {
+			select {
+			case <-connection.Done():
+				hint("Live server: Client disconnected\n")
+				return
+			case nerr := <-ready:
+				var value = "error"
+				if nerr == 0 {
+					cancel()
+					value = "refresh"
+				}
+				if _, err := fmt.Fprintf(w, "data: %s\n\n", value); err != nil {
+					hint("Live server: error while sending data over SSE", err)
+					return
+				}
+				if err := rc.Flush(); err != nil {
+					hint("Live server: error while flushing data over SSE", err)
+					return
+				}
+				if nerr == 0 {
+					return
+				}
+			}
+		}
+	}
+}
+
 func each(reload time.Duration, notify func() error) error {
 	var tick = time.NewTicker(reload)
 	defer tick.Stop()
@@ -124,6 +166,7 @@ func build() chan error {
 }
 
 func liveReload() chan []error {
+	var ssech chan int
 	errch, prev := make(chan []error), ""
 
 	var reload = func() error {
@@ -140,6 +183,9 @@ func liveReload() chan []error {
 			errch <- errs
 			prev = serr
 		}
+		if ssech != nil {
+			ssech <- len(errs)
+		}
 		return nil
 	}
 
@@ -148,6 +194,8 @@ func liveReload() chan []error {
 
 		var err error
 		if *settings.reload == 0 {
+			ssech = make(chan int)
+			http.HandleFunc("/wed-live", sse(ssech))
 			if err = watch(settings.InputDir, settings.OutputDir, reload); err != nil {
 				err = fmt.Errorf("Live server stopped working cause %w", err)
 			}

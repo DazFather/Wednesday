@@ -96,6 +96,9 @@ func serveFlags() {
 	if minify != nil {
 		settings.Minify = *minify
 	}
+	if settings.reload != nil && settings.LiveServer == "" {
+		settings.LiveServer = "http://127.0.0.1" + settings.port + "/wed-live"
+	}
 }
 
 func initFlags() {

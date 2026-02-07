@@ -107,6 +107,37 @@ func (p *page) genImportScript(components []*Component) (func() template.HTML, e
 		tags                = `<script type="text/javascript" src="` + p.ScriptURL("wed-utils") + `"></script>`
 	)
 
+	if p.LiveServer != "" {
+		tags += `<script>
+			(()=>{
+				const connection = new EventSource("` + p.LiveServer + `")
+
+				let i = 0
+				connection.onerror = err => {
+					i++
+					console.error("Error when connecting with live server")
+					console.error(err)
+					if (i >= 3) {
+						console.log("Closing live server connection after 3 attempts, refresh manually to se changes")
+						connection.close()
+					}
+				}
+
+				connection.onmessage = ({ data }) => {
+					switch (data) {
+					case "error":
+						console.error("There are errors douring build phase")
+						alert("There are errors douring build phase")
+						break;
+					case "refresh":
+						console.log("Reloading...", data)
+						window.location.reload()
+					}
+				}
+			})()
+		</script>`
+	}
+
 	for _, c := range components {
 		modType := p.Module
 		if c.Module != nil {

@@ -33,12 +33,13 @@ func (mt *ModuleType) UnmarshalJSON(raw []byte) error {
 }
 
 type Settings struct {
-	Var       map[string]any      `json:"vars,omitempty"`
-	Commands  map[string][]string `json:"commands,omitempty"`
-	OutputDir string              `json:"output_dir,omitempty"`
-	InputDir  string              `json:"input_dir,omitempty"`
-	Module    ModuleType          `json:"module,omitempty"`
-	Minify    bool                `json:"minify,omitempty"`
+	Var        map[string]any      `json:"vars,omitempty"`
+	Commands   map[string][]string `json:"commands,omitempty"`
+	OutputDir  string              `json:"output_dir,omitempty"`
+	InputDir   string              `json:"input_dir,omitempty"`
+	Module     ModuleType          `json:"module,omitempty"`
+	Minify     bool                `json:"minify,omitempty"`
+	LiveServer string              `json:"live_server,omitempty"`
 }
 
 func (s Settings) StylePath(elem ...string) string {
