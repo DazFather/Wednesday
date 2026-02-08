@@ -166,7 +166,7 @@ func build() chan error {
 }
 
 func liveReload() chan []error {
-	var ssech chan int
+	ssech := make(chan int)
 	errch, prev := make(chan []error), ""
 
 	var reload = func() error {
@@ -189,13 +189,13 @@ func liveReload() chan []error {
 		return nil
 	}
 
+	http.HandleFunc("/wed-live", sse(ssech))
+
 	go func() {
 		defer close(errch)
 
 		var err error
 		if *settings.reload == 0 {
-			ssech = make(chan int)
-			http.HandleFunc("/wed-live", sse(ssech))
 			if err = watch(settings.InputDir, settings.OutputDir, reload); err != nil {
 				err = fmt.Errorf("Live server stopped working cause %w", err)
 			}
