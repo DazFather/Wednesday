@@ -149,14 +149,41 @@ func sse(ready <-chan int) http.HandlerFunc {
 	}
 }
 
-func each(reload time.Duration, notify func() error) error {
+func each(reload time.Duration, rootdir, builddir string, notify func() error) error {
 	var tick = time.NewTicker(reload)
 	defer tick.Stop()
 
+	latest := time.Now().Unix()
+
 	for range tick.C {
-		if err := notify(); err != nil {
+		edited := false
+
+		err := filepath.Walk(rootdir, func(path string, info os.FileInfo, e error) error {
+			if e != nil {
+				return e
+			}
+
+			if !info.IsDir() {
+				if tfile := info.ModTime().Unix(); tfile > latest {
+					latest = tfile
+					edited = true
+					return filepath.SkipAll
+				}
+			} else if path == builddir {
+				return filepath.SkipDir
+			}
+			return nil
+		})
+		if err != nil {
 			return err
 		}
+
+		if edited {
+			if err := notify(); err != nil {
+				return err
+			}
+		}
+
 	}
 	return nil
 }
@@ -199,7 +226,7 @@ func liveReload() chan []error {
 			if err = watch(settings.InputDir, settings.OutputDir, reload); err != nil {
 				err = fmt.Errorf("Live server stopped working cause %w", err)
 			}
-		} else if err = each(*settings.reload, reload); err != nil {
+		} else if err = each(*settings.reload, settings.InputDir, settings.OutputDir, reload); err != nil {
 			err = fmt.Errorf("Live server stopped working cause %w", err)
 		}
 		if err != nil {
