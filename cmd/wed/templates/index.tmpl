@@ -24,8 +24,8 @@
 		<!-- This will imports all dynamic components wich are essentially template tags -->
 		{!{ import "dynamics" }!}
 		<!-- 'use' lets you embeds the content of specified component at build time
-			additonally you can provide properties with 'props' or nested component with 'hold'
+			additonally you can provide properties with 'args' or nested component with 'hold'
 		-->
-		{{ use "app" ( props "title" ( list "Wed" "nesday" ) ) }}
+		{{ use "app" ( args "title" ( list "Wed" "nesday" ) ) }}
 	</body>
 </html>

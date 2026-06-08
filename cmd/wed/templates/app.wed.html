@@ -62,7 +62,7 @@
 			<!-- Example of useDisplay -->
 			<h1 class="title">loading...</h1>
 			<!-- Example of component 'props' -->
-			<strong>to <mark>{{ index .Props.title 0 }}</mark>{{ index .Props.title 1 }}</strong>
+			<strong>to <mark>{{ index ( .Props "title" ) 0 }}</mark>{{ index ( .Props "title" ) 1 }}</strong>
 		</header>
 		<!-- Example of useBinds - bind="property:name:events" -->
 		<section class="try-out-section flex-center">
