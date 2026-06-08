@@ -126,20 +126,21 @@ Renders the HTML content of the `<component>.wed.html` file.
 This also registers any dependencies used inside the component.
 
 .TP
-.B props \(dq<key>\(dq <value> \(dq<key2>\(dq <value2>
-Used in a pipeline to pass data:
+.B args \(dq<key>\(dq <value> \(dq<key2>\(dq <value2>
+Used in a pipeline with use to pass data:
 .EX
-{{ use "contacts" props
+{{ use "contacts" args
   "DazFather" "+39 1234567"
   "NicoNex" "+39 987654"
 }}
 .EE
 Values can be accessed inside the \fIcomponent\fR with:
-.B{{ .Props.<key> }}
+.B{{ .Props <key> <default> }}
 .EX .\" html
-<li><em>mentor:</em> <span>{{ .Props.NicoNex   }}</span></li>
-<li><em>mentee:</em> <span>{{ .Props.DazFather }}</span></li>
+<li><em>mentor:</em> <span>{{ .Props "NicoNex" }}</span></li>
+<li><em>mentee:</em> <span>{{ .Props "DazFather" "t.me/DazFather" }}</span></li>
 .EE
+Default value is optional on static component but mandatory on hybrid ones, as it would be needed when the component is  used dynamically
 
 .TP
 .B hold \(dq<child-component>\(dq \(dq<child-component2>\(dq

@@ -97,12 +97,12 @@ To do this, we can simply use `{{ use "my-component-name" }}`, and the content o
 
 
 #### Passing values between templates
-You can also pass a list of values between templates by using the provided `args` function. For example:
+You can also pass a list of values between templates by using the provided `args` function and `.Props` for retrieve it. For example:
 ```html
 <html>
     <h1>Concept Bucket</h1>
     <strong>List of ideas that came to my mind:</strong>
-    {{ use "child" props "pippo" 3.14 "banana" false }}
+    {{ use "child" ( args "pippo" 3.14 "banana" false ) }}
 </html>
 ```
 > `parent.wed.html`
@@ -110,8 +110,8 @@ You can also pass a list of values between templates by using the provided `args
 ```html
 <html>
     <p>
-        First thought: <mark>{{ .Props.pippo . }}</mark><br>
-        Second: <em>{{ .Props.banana }}</em>
+        First thought: <mark>{{ .Props "pippo" }}</mark><br>
+        Second: <em>{{ .Props "banana" }}</em>
     </p>
 <html>
 ```
