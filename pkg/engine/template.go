@@ -27,7 +27,7 @@ func NewTemplateData(s Settings) *TemplateData {
 			"list":  mock,
 			"embed": mock,
 			"use":   mock,
-			"props": mock,
+			"args":  mock,
 			"hold":  mock,
 			"drop":  mock,
 			"var":   mock,

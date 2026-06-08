@@ -37,11 +37,11 @@ func (td *TemplateData) newPage(name string) *page {
 			}
 			return
 		},
-		"use":   p.use,
-		"props": p.props,
-		"hold":  p.hold,
-		"drop":  p.drop,
-		"var":   p.getVar,
+		"use":  p.use,
+		"args": p.args,
+		"hold": p.hold,
+		"drop": p.drop,
+		"var":  p.getVar,
 	})
 
 	td.pages = append(td.pages, &p)
@@ -289,9 +289,35 @@ func (p *page) getVar(name string, def ...any) (any, error) {
 	return def, nil
 }
 
+func (p *page) Props(key string, def any) any {
+	return def
+}
+
 type ComponentInfo struct {
-	holds map[string]template.HTML
-	Props map[string]any
+	hybrid bool
+	holds  map[string]template.HTML
+	props  map[string]any
+}
+
+func (c ComponentInfo) Props(key string, def ...any) (val any, err error) {
+	switch len(def) {
+	case 0:
+		if c.hybrid {
+			return nil, fmt.Errorf("cannot access hybrid component props without default value (key: %s)", key)
+		}
+		found := false
+		if val, found = c.props[key]; !found {
+			return nil, fmt.Errorf("missing property %q or a default value", key)
+		}
+	case 1:
+		found := false
+		if val, found = c.props[key]; !found {
+			val = def[0]
+		}
+	default:
+		return nil, fmt.Errorf("too many default values (%d) on .Props %q", len(def), key)
+	}
+	return val, nil
 }
 
 func (c *ComponentInfo) merge(another ComponentInfo) {
@@ -303,12 +329,12 @@ func (c *ComponentInfo) merge(another ComponentInfo) {
 			c.holds[key] = val
 		}
 	}
-	if len(another.Props) > 0 {
-		if c.Props == nil {
-			c.Props = make(map[string]any)
+	if len(another.props) > 0 {
+		if c.props == nil {
+			c.props = make(map[string]any)
 		}
-		for key, val := range another.Props {
-			c.Props[key] = val
+		for key, val := range another.props {
+			c.props[key] = val
 		}
 	}
 }
@@ -326,10 +352,6 @@ func (p *page) use(name string, opt ...ComponentInfo) (template.HTML, error) {
 		}
 	}
 
-	if err := p.ExecuteTemplate(&str, "wed-static-"+name, data); err != nil {
-		return "", err
-	}
-
 	for _, c := range *p.components {
 		if c.Name == name {
 			dep, err := p.toDepencency(c)
@@ -337,10 +359,14 @@ func (p *page) use(name string, opt ...ComponentInfo) (template.HTML, error) {
 				return "", err
 			}
 			p.deps = append(p.deps, dep)
+			data.hybrid = c.Type == hybrid
 			break
 		}
 	}
 
+	if err := p.ExecuteTemplate(&str, "wed-static-"+name, data); err != nil {
+		return "", err
+	}
 	return template.HTML(str.String()), nil
 }
 
@@ -367,11 +393,11 @@ func (p page) toDepencency(comp Component) (dep ComponentDependency, err error) 
 	return
 }
 
-func (p *page) props(props ...any) ComponentInfo {
+func (p *page) args(props ...any) ComponentInfo {
 	var (
 		lastKey string
 		skipped int
-		res     = ComponentInfo{Props: make(map[string]any)}
+		res     = ComponentInfo{props: make(map[string]any)}
 	)
 
 	for i, val := range props {
@@ -386,7 +412,7 @@ func (p *page) props(props ...any) ComponentInfo {
 				lastKey = fmt.Sprint(v)
 			}
 		} else {
-			res.Props[lastKey] = val
+			res.props[lastKey] = val
 		}
 	}
 
