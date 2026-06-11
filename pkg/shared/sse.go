@@ -12,10 +12,6 @@ type SSEHandler struct {
 }
 
 func (h *SSEHandler) Broadcast(value string) {
-	// h.connections.Range(func(ch *chan string, _ struct{}) bool {
-	// 	*ch <- value
-	// 	return false
-	// })
 	var conns []chan string
 
 	h.connections.Range(func(ch *chan string, _ struct{}) bool {
