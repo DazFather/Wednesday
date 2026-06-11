@@ -1,9 +1,6 @@
 package shared
 
 import (
-	"encoding/xml"
-	"path/filepath"
-	"strings"
 	"sync"
 )
 
@@ -26,20 +23,4 @@ func (s *Smap[K, V]) Range(fn func(K, V) bool) {
 	(*sync.Map)(s).Range(func(rk, rv any) bool {
 		return fn(rk.(K), rv.(V))
 	})
-}
-
-func splitExt(name string) (base, ext string) {
-	ext = strings.ToLower(filepath.Ext(name))
-	base = name[:len(name)-len(ext)]
-	if ext == ".html" {
-		ext = strings.ToLower(filepath.Ext(base)) + ext
-		base = name[:len(name)-len(ext)]
-	}
-	return
-}
-
-func validHTML(content string) error {
-	var dec = xml.NewDecoder(strings.NewReader(content))
-	dec.Strict = false
-	return dec.Decode(new(interface{}))
 }
