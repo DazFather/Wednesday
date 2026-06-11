@@ -1,3 +1,7 @@
+<!-- Each wed component is made by an html section and optionally a style and a script
+the component must end with the .wed.html extention with a unique name. 
+You can be placed everywhere indisde your project directory
+ -->
 <style>
 	/* you can declared properties here */
 	font-size: 1.75em;
@@ -23,7 +27,7 @@
 	}
 
 	/* CSS nesting is natively supported by most browsers now!
-		wed uses it to incaplusulate this style only for this "app" component */
+		wed uses it to incaplusulate the component style */
 	.try-out-section {
 		max-width: 40ch;
 		margin: 0 auto;
@@ -61,7 +65,7 @@
 		<header>
 			<!-- Example of useDisplay -->
 			<h1 class="title">loading...</h1>
-			<!-- Example of component 'props' -->
+			<!-- Example of component '.Props' -->
 			<strong>to <mark>{{ index ( .Props "title" ) 0 }}</mark>{{ index ( .Props "title" ) 1 }}</strong>
 		</header>
 		<!-- Example of useBinds - bind="property:name:events" -->
@@ -98,4 +102,5 @@
 
 	// Example of useBinds
 	const explore = useBinds("section");
+	// explore.text = "try to decomment this";
 </script>
