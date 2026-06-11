@@ -123,17 +123,16 @@ func (p *page) genImportScript(components []*Component) (func() template.HTML, e
 					}
 				}
 
-				connection.onmessage = ({ data }) => {
-					switch (data) {
-					case "error":
-						console.error("There are errors douring build phase")
-						alert("There are errors douring build phase")
-						break;
-					case "refresh":
-						console.log("Reloading...", data)
-						window.location.reload()
-					}
-				}
+				connection.addEventListener('build', ({ data }) => {
+					console.log("Reloading...")
+					window.location.reload()
+				})
+
+				connection.addEventListener('build-errors', ({ data }) => {
+					const msg = "[" + (new Date().toLocaleString()) +"] " + data + " error" + (data != 1 ? 's' : '') +" douring build phase"
+					console.error(msg)
+					alert(msg)
+				})
 			})()
 		</script>`
 	}

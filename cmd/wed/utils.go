@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/DazFather/Wednesday/pkg/engine"
+	"github.com/DazFather/Wednesday/pkg/shared"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -109,44 +109,23 @@ func watch(rootdir, builddir string, notify func() error) error {
 	return err
 }
 
-func sse(ready <-chan int) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
+func useSSE(buildCh <-chan []error) {
+	var hub shared.SSEHandler
 
-		// You may need this locally for CORS requests
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		connection, cancel := context.WithCancel(r.Context())
-
-		rc := http.NewResponseController(w)
-
-		for {
-			select {
-			case <-connection.Done():
-				hint("Live server: Client disconnected\n")
-				return
-			case nerr := <-ready:
-				var value = "error"
-				if nerr == 0 {
-					cancel()
-					value = "refresh"
-				}
-				if _, err := fmt.Fprintf(w, "data: %s\n\n", value); err != nil {
-					hint("Live server: error while sending data over SSE", err)
-					return
-				}
-				if err := rc.Flush(); err != nil {
-					hint("Live server: error while flushing data over SSE", err)
-					return
-				}
-				if nerr == 0 {
-					return
-				}
+	go func() {
+		for errs := range buildCh {
+			switch nerrs := len(errs); nerrs {
+			case 0:
+				hub.Broadcast("event: build\ndata: success")
+			default:
+				hub.Broadcast(fmt.Sprint("event: build-errors\ndata: ", nerrs))
 			}
 		}
-	}
+	}()
+
+	http.HandleFunc("/wed-live", hub.Handler("*", func(e error) {
+		fmt.Println("[Live Server]", e)
+	}, nil, nil))
 }
 
 func each(reload time.Duration, rootdir, builddir string, notify func() error) error {
@@ -193,10 +172,12 @@ func build() chan error {
 }
 
 func liveReload() chan []error {
-	ssech := make(chan int)
-	errch, prev := make(chan []error), ""
+	var (
+		errch, ssech = make(chan []error), make(chan []error)
+		prev         string
+	)
 
-	var reload = func() error {
+	reload := func() error {
 		var (
 			errs []error
 			serr string
@@ -208,18 +189,19 @@ func liveReload() chan []error {
 
 		if serr != prev {
 			errch <- errs
+			ssech <- errs
 			prev = serr
-		}
-		if ssech != nil {
-			ssech <- len(errs)
+		} else if serr == "" {
+			ssech <- errs
 		}
 		return nil
 	}
 
-	http.HandleFunc("/wed-live", sse(ssech))
+	useSSE(ssech)
 
 	go func() {
 		defer close(errch)
+		defer close(ssech)
 
 		var err error
 		if *settings.reload == 0 {
