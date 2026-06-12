@@ -39,46 +39,55 @@ func (h *SSEHandler) close(ch *chan string) {
 	h.connections.Delete(ch)
 }
 
-func (h *SSEHandler) Handler(acao string, handleErr func(error), ping, retry *time.Duration) http.HandlerFunc {
-	if handleErr == nil {
-		handleErr = func(_ error) {}
-	}
+type SSEHandlerOpt struct {
+	CrossOriginHeader string
+	HandleErr         func(error)
+	Ping, Retry       time.Duration
+}
 
-	send := func(f *http.ResponseController, w http.ResponseWriter, base string, args ...any) {
-		_, err := fmt.Fprintf(w, base+"\n\n", args...)
-		if err == nil {
-			err = f.Flush()
-		}
-		if err != nil {
-			handleErr(fmt.Errorf("Unable to send data over SSE: %w", err))
-		}
+func (opt SSEHandlerOpt) send(f *http.ResponseController, w http.ResponseWriter, base string, args ...any) {
+	_, err := fmt.Fprintf(w, base+"\n\n", args...)
+	if err == nil {
+		err = f.Flush()
 	}
+	if err != nil && opt.HandleErr != nil {
+		opt.HandleErr(fmt.Errorf("Unable to send data over SSE: %w", err))
+	}
+}
 
+func (opt SSEHandlerOpt) pinger() *time.Ticker {
+	const def = 10 * time.Second
+	if opt.Ping == 0 {
+		opt.Ping = def
+	}
+	return time.NewTicker(opt.Ping)
+}
+
+func (h *SSEHandler) Handler(opt *SSEHandlerOpt) http.HandlerFunc {
+	if opt == nil {
+		opt = new(SSEHandlerOpt)
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
-		w.Header().Set("Access-Control-Allow-Origin", acao)
+		if opt.CrossOriginHeader != "" {
+			w.Header().Set("Access-Control-Allow-Origin", opt.CrossOriginHeader)
+		}
 
 		var (
 			values             = h.connect()
 			flusher            = http.NewResponseController(w)
 			connection, cancel = context.WithCancel(r.Context())
+			pinger             = opt.pinger()
 		)
 		defer h.close(values)
 		defer cancel()
-
-		if retry != nil {
-			send(flusher, w, "retry: %d", retry.Milliseconds())
-		}
-
-		var pinger *time.Ticker
-		if ping != nil {
-			pinger = time.NewTicker(*ping)
-		} else {
-			pinger = time.NewTicker(10 * time.Second)
-		}
 		defer pinger.Stop()
+
+		if opt.Retry != 0 {
+			opt.send(flusher, w, "retry: %d", opt.Retry.Milliseconds())
+		}
 
 		for {
 			select {
@@ -86,10 +95,10 @@ func (h *SSEHandler) Handler(acao string, handleErr func(error), ping, retry *ti
 				return
 			case val := <-*values:
 				if val != "" {
-					send(flusher, w, val)
+					opt.send(flusher, w, val)
 				}
 			case <-pinger.C:
-				send(flusher, w, "event: ping\ndata: keepalive")
+				opt.send(flusher, w, "event: ping\ndata: keepalive")
 			}
 		}
 	}

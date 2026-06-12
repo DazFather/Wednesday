@@ -123,9 +123,10 @@ func useSSE(buildCh <-chan []error) {
 		}
 	}()
 
-	http.HandleFunc("/wed-live", hub.Handler("*", func(e error) {
-		fmt.Println("[Live Server]", e)
-	}, nil, nil))
+	http.HandleFunc(settings.LiveServer, hub.Handler(&shared.SSEHandlerOpt{
+		CrossOriginHeader: "*",
+		HandleErr:         func(e error) { hint("[Live Server]", e) },
+	}))
 }
 
 func each(reload time.Duration, rootdir, builddir string, notify func() error) error {
