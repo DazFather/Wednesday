@@ -28,7 +28,7 @@ Or to automate it:
 
 If you want to compile straight from the source is recommanded to install it by cloning the repo like so:
 ```shell
-git clone https://github.com/DazFather/lxl.git
+git clone https://github.com/DazFather/Wednesday.git
 cd Wednesday
 ```
 Then simply run the related installation script depending on your os
