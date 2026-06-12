@@ -32,15 +32,16 @@ curl -sSL "$URL" -o "$TMP_DIR/$FILENAME"
 
 # Extract and run included install script
 tar -xzf "$TMP_DIR/$FILENAME" -C "$TMP_DIR"
-INSTALL_SCRIPT="$TMP_DIR/install.sh"
+pushd .
+cd "$TMP_DIR"
 if [ -x $INSTALL_SCRIPT ]; then
   echo "Running installer..."
-  chmod +x $INSTALL_SCRIPT
-  $INSTALL_SCRIPT
+  chmod +x ./install.sh
+  ./install.sh
 else
   echo "Install script not found in archive!" >&2
   exit 1
 fi
-
+popd
 echo "✓ Installed successfully"
 

@@ -83,14 +83,14 @@ if [ -d "manuals" ] && command -v man >/dev/null 2>&1; then
 
         dest_dir="${MAN_DIR}/man${section}"
         mkdir -p "$dest_dir"
-        
+
         if cp "$manpage" "$dest_dir/"; then
             echo " [OK]"
         else
             echo " [FAILED]" >&2
         fi
     done
-    
+
     # Update man database if mandb exists
     if command -v mandb >/dev/null 2>&1; then
         echo "Updating man database..."
