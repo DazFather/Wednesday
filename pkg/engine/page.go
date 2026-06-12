@@ -108,33 +108,7 @@ func (p *page) genImportScript(components []*Component) (func() template.HTML, e
 	)
 
 	if p.LiveServer != "" {
-		tags += `<script>
-			(()=>{
-				const connection = new EventSource("` + p.LiveServer + `")
-
-				let i = 0
-				connection.onerror = err => {
-					i++
-					console.error("Error when connecting with live server")
-					console.error(err)
-					if (i >= 3) {
-						console.log("Closing live server connection after 3 attempts, refresh manually to se changes")
-						connection.close()
-					}
-				}
-
-				connection.addEventListener('build', ({ data }) => {
-					console.log("Reloading...")
-					window.location.reload()
-				})
-
-				connection.addEventListener('build-errors', ({ data }) => {
-					const msg = "[" + (new Date().toLocaleString()) +"] " + data + " error" + (data != 1 ? 's' : '') +" douring build phase"
-					console.error(msg)
-					alert(msg)
-				})
-			})()
-		</script>`
+		tags += p.SSEClientTag()
 	}
 
 	for _, c := range components {
