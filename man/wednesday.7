@@ -278,36 +278,6 @@ document.body.appendChild(clone())
 .EE
 
 
-.SH PROJECT CONFIGURATION
-The project JSON settings file is optional. By default, Wednesday looks for \fIwed-settings.json\fR in the project root.
-Alternatively, a different file can be specified via the \fI--settings\fR flag, which must then be passed to all `wed` commands.
-
-Supported fields include:
-
-.SS vars
-A key-value map of build-time variables, available via the template engine using \fB{{ var \(dqkey\(dq }}\fR.
-
-.SS commands
-A map from pipeline names to shell commands, which can be run using \fBwed run <pipeline-name>\fR.
-
-.SS output_dir
-The directory where the compiled site will be placed. (default: \(dq./build\(dq)
-
-.SS input_dir
-The directory where Wednesday will search for components and pages. (default: \(dq.\(dq)
-
-.SS module
-Defines the JavaScript module type for importing scripts on pages:
-.RS
-
-.B text/javascript (default)
-Uses the \fIrequire\fR attribute for dependency management.
-
-.B ecma
-Or alias \fImodule\fR — enables ECMAScript module support.
-The user is responsible for managing dependencies via ES module imports.
-.RE
-
 .SH SEE ALSO
 .BR wed (1)
 

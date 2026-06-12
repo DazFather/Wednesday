@@ -7,32 +7,30 @@ wed \- static site builder and component manager for the Wednesday framework
 [\fIcommand\fR] [\fIoptions\fR]
 
 .SH DESCRIPTION
-\fBWednesday\fR is a static site generator and component manager. It allows you to build projects, use shared components from trusted libraries, and serve them locally.
+\fBwed\fR is a static site generator and component manager. It allows you to build projects, use shared components from trusted libraries, and serve them locally.
 
 .SH COMMANDS
-.TP
-.B build
-Compile the project into a static site. Treats all \fI.wed.html\fR as components and \fI.tmpl\fR as pages.
+
+.SS build
+Compile the project into a static site. Treats all \fI.wed.html\fR files as components and \fI.tmpl\fR as pages.
 The cli will look recursively in all the project directories.
-Results will be generated on the output directory. 
+Results will be generated on the output directory.
 .TP
 .B Options:
 .TP
-\fB\-\-mini\fR
-Minify all styles and all suitables scripts of all components for each page into single <page>-mini.css and <page>-mini.js files.
+.B \-\-mini
+Boolean flag. If true force minifications for all styles and all relevant scripts of all components for each page into single \fI\fR<page>-mini.css and \fI\fR<page>-mini.js files.
 
-.TP
-.B init [directory]
+.SS init [directory]
 Create a default project in the specified directory. If not provided, the current directory is used.
 
-.TP
-.B serve
+.SS serve
 Build and serve the project statically via HTTP.
 .TP
 .B Options:
 .TP
-\fB\-\-mini\fR
-Minify all styles and all suitables scripts of all components for each page into single <page>-mini.css and <page>-mini.js files.
+.B \-\-mini
+Boolean flag. If true force minifications for all styles and all relevant scripts of all components for each page into single \fI\fR<page>-mini.css and \fI\fR<page>-mini.js files.
 .TP
 \fB\-l\fR, \fB\-\-live\fR
 Enable automatic rebuilding on detected changes or at specified time interval.
@@ -40,15 +38,13 @@ Enable automatic rebuilding on detected changes or at specified time interval.
 \fB\-p\fR, \fB\-\-port\fR
 Specify server port (default \fI:8080\fR).
 
-.TP
-.B run <command>
+.SS run <command>
 Execute a pipeline of shell commands, as defined in the project settings.
 
-.TP
-.B lib <subcommand>
-Manage and interact with external libraries.
+.SS lib <subcommand>
+Experimental command. Manage and interact with external libraries.
 
-.SS LIBRARY SUBCOMMANDS
+.B Subcommands:
 .TP
 .B search [pattern]
 Search for components in trusted libraries.
@@ -83,8 +79,12 @@ Use a component in the current project. You may prefix it with \fIlibrary/\fR to
 Specify the project settings file. Default is \fIwed-settings.json\fR.
 
 .TP
-\fB\-\-no-color\fR, \fB\-nc\fR
+\fB\-\-no\-color\fR, \fB\-nc\fR
 Disable colored terminal output.
+
+.TP
+\fB\-\-quiet\fR, \fB\-q\fR
+Drastically reduce terminal output.
 
 .TP
 \fB\-h\fR, \fB\-\-help\fR
@@ -95,9 +95,50 @@ Display detailed help.
 Show the current version.
 
 .SH FILES
-.TP
-.I wed-settings.json
+
+.SS \fI<page>\fR.tmpl
+A file ending in \fI.tmpl\fR is interpreted as an HTML page. It can be placed anywhere inside the input directory. By default, generated pages are written to the top level of the output directory.
+See \fBwednesday\fR(7) for syntax.
+
+.SS \fI<component>\fR.wed.html
+A file ending in \fI.wed.html\fR is interpreted as a Wednesday component. It can be placed anywhere inside the input directory. The \fBname must be unique\fR within the entire project.
+See \fBwednesday\fR(7) for syntax.
+
+.SS wed-settings.json
 Default settings file for a project. If not present, defaults values are used.
+By default, Wednesday looks for \fIwed-settings.json\fR in the project root. Alternatively, a different file can be specified via the \fI\-\-settings\fR flag, which must then be passed to all `wed` commands.
+.TP
+.B Supported fields:
+.TP
+.B vars
+A key-value map of build-time variables, available via the template engine using \fB{{ var \(dqkey\(dq }}\fR.
+.TP
+.B commands
+A map from pipeline names to shell commands, which can be run using \fBwed run <pipeline-name>\fR.
+.TP
+.B output_dir
+Directory where the compiled site will be placed (default: \(dq./build\(dq).
+.TP
+.B input_dir
+Directory where components and pages are searched (default: \(dq.\(dq).
+.TP
+.B module
+Defines the JavaScript module type for importing scripts on pages:
+.RS
+.TP
+.B text/javascript (default)
+Uses the \fIrequire\fR attribute for dependency management.
+.TP
+.B ecma
+Or alias \fImodule\fR — enables ECMAScript module support.
+The user is responsible for managing dependencies via ES module imports.
+.RE
+.TP
+.B minify
+Minify styles and relevant scripts per page into \fI<page>\fR-mini.css and \fI<page>\fR-mini.js files. By default, only component-generated files are bundled individually.
+.TP
+.B live_server
+Relative URI path of dev live server (default: \(dq./wed\-live\(dq).
 
 .SH AUTHOR
 Written by Davide Lavermicocca <dlavermicocca99.uni@gmail.com>.
