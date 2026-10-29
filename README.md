@@ -102,7 +102,10 @@ You can also pass a list of values between templates by using the provided `args
 <html>
     <h1>Concept Bucket</h1>
     <strong>List of ideas that came to my mind:</strong>
-    {{ use "child" ( args "pippo" 3.14 "banana" false ) }}
+    {{ use "child" ( args 
+        "pippo" 3.14
+        "banana" false
+    ) }}
 </html>
 ```
 > `parent.wed.html`
@@ -113,7 +116,7 @@ You can also pass a list of values between templates by using the provided `args
         First thought: <mark>{{ .Props "pippo" }}</mark><br>
         Second: <em>{{ .Props "banana" }}</em>
     </p>
-<html>
+</html>
 ```
 > `child.wed.html`
 
@@ -173,7 +176,7 @@ When you want to update text on the screen:
 ```html
 <html>
     <p class="display">loading...</p><!-- expected: Hello World! -->
-<html>
+</html>
 <script>
     const show = useDisplay(".display", t => t + " World!")
     console.log(show("Hello")) // expected: Hello World!
@@ -187,7 +190,7 @@ Runs a callback whenever the value changes:
 ```html
 <html>
     <p class="display">loading...</p><!-- expected: 24,6 -->
-<html>
+</html>
 <script>
     const arr = useEffect([], (() => {
         const show = useDisplay(".display")

@@ -200,7 +200,7 @@ Command flags:`, gray.Embed(`
 
   --`, cyan.Paint("mini"), ` Minify all styles and all suitables scripts of all components
    used by each page into single <page>-mini.css and <page>-mini.js files.
-   By default only component generated files are minified and bundled by themselfs
+   By default only component generated files are minified and bundled by themselves
 
 `), flagsUsage())
 

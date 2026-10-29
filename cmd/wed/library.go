@@ -98,7 +98,7 @@ func (manifests Collection) Find(search string) (lib, name string, selected Mani
 	var results []string
 
 	for lib, manifest := range manifests {
-		for n, _ := range manifest {
+		for n := range manifest {
 			if n == search {
 				name = n
 				results = append(results, lib)
