@@ -1,8 +1,6 @@
 package shared
 
-import (
-	"sync"
-)
+import "sync"
 
 type Smap[K comparable, V any] sync.Map
 

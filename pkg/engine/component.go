@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/DazFather/Wednesday/pkg/shared"
+
+	"golang.org/x/net/html"
 )
 
 var (
@@ -70,50 +72,68 @@ func (c Component) Identifier() string {
 }
 
 func ParseComponent(r io.Reader) (c Component, err error) {
-	parsed, err := shared.ParsePlainHtml(r, []string{"script", "style", "html"}, false)
+	parsed, err := shared.ParsePlainHtml(r)
 	if err != nil {
 		return
 	}
 
-	for _, block := range parsed {
-		switch block.Tag {
-		case "html":
-			c.HTML = block.InnerHTML
-			if val, found := block.GetAttr("type"); found {
-				if c.Type, err = ParseComponentType(val); err != nil {
-					return
-				}
-			}
-		case "style":
-			c.Style = block.InnerHTML
-		case "script":
-			c.Script = block.InnerHTML
-			for _, attr := range block.Attrs {
-				switch attr.Key {
-				case "preload":
-					if c.Preload = attr.Val == "" || strings.ToLower(attr.Val) == "true"; c.Preload {
-						c.Entry = true
-					}
-				case "entrypoint": // TODO: find a better name
-					c.Entry = attr.Val == "" || strings.ToLower(attr.Val) == "true"
-				case "require":
-					c.Imports = spaces.Split(attr.Val, -1)
-				case "module":
-					if module, err := ParseModuleType(attr.Val); err == nil {
-						c.Module = &module
-					} else {
-						return c, err
-					}
-				}
-			}
-		}
-	}
-
-	if c.HTML == "" {
+	if block, found := parsed["html"]; found {
+		err = c.SetHtml(block.Attrs, block.InnerHTML)
+	} else {
 		err = ErrNoHTMLData
 	}
 
+	if block, found := parsed["style"]; found {
+		c.Style = block.InnerHTML
+	}
+
+	if block, found := parsed["script"]; found {
+		err = errors.Join(err, c.SetScript(block.Attrs, block.InnerHTML))
+	}
+
 	return
+}
+
+func (c *Component) SetHtml(attrs []html.Attribute, content string) (err error) {
+	switch len(attrs) {
+	case 1:
+		if attrs[0].Key != "type" {
+			err = errors.New("Unrecognized html attribute '" + attrs[0].Key + "', the only accepted is 'type'")
+		} else {
+			c.Type, err = ParseComponentType(attrs[0].Val)
+		}
+		fallthrough
+	case 0:
+		c.HTML = content
+	default:
+		err = errors.New("Too many html attributes, the only accepted is 'type' ")
+	}
+	return
+}
+
+func (c *Component) SetScript(attrs []html.Attribute, content string) error {
+	c.Script = content
+	for _, attr := range attrs {
+		switch attr.Key {
+		case "preload":
+			if c.Preload = attr.Val == "" || strings.ToLower(attr.Val) == "true"; c.Preload {
+				c.Entry = true
+			}
+		case "entrypoint": // TODO: find a better name
+			c.Entry = attr.Val == "" || strings.ToLower(attr.Val) == "true"
+		case "require":
+			c.Imports = spaces.Split(attr.Val, -1)
+		case "module":
+			if module, err := ParseModuleType(attr.Val); err == nil {
+				c.Module = &module
+			} else {
+				return err
+			}
+		default:
+			return errors.New("Unrecognized script attribute '" + attr.Key + "'")
+		}
+	}
+	return nil
 }
 
 func NewComponent(name string, content []byte) (Component, error) {

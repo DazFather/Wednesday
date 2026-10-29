@@ -3,6 +3,7 @@ package shared
 import (
 	"errors"
 	"io"
+	"regexp"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -23,70 +24,68 @@ func (b HtmlBlock) GetAttr(name string) (val string, ok bool) {
 	return
 }
 
-func ParsePlainHtml(r io.Reader, allowedTagNames []string, allowDuplicate bool) (parsed []HtmlBlock, err error) {
+func ParsePlainHtml(r io.Reader) (parsed map[string]*HtmlBlock, err error) {
 	var (
+		rgx       = regexp.MustCompile(`html|script|style`)
 		tokenizer = html.NewTokenizer(r)
-		current   *HtmlBlock
+		unclosed  *HtmlBlock
 	)
+	parsed = make(map[string]*HtmlBlock)
 
 	for ttype := tokenizer.Next(); ttype != html.ErrorToken; ttype = tokenizer.Next() {
 		switch ttype {
 		case html.StartTagToken:
 			token := tokenizer.Token()
 			tag := token.Data
+			if _, found := parsed[tag]; found {
+				err = errors.New("Duplicate <" + tag + "> found")
+				return
+			}
 
-			unclosed := current
+			primary := rgx.MatchString(tag)
 
-			for i := range allowedTagNames {
-				if tag == allowedTagNames[i] {
-					parsed = append(parsed, HtmlBlock{Attrs: token.Attr, Tag: tag})
-					current = &parsed[len(parsed)-1]
-					if !allowDuplicate {
-						allowedTagNames[i] = ""
-					}
-					break
+			if unclosed == nil {
+				if !primary {
+					err = errors.New("Wrong, unrecognized or misplaced <" + tag + "> found")
+					return
 				}
-			}
-
-			if current == nil {
-				err = errors.New("unallowed tag <" + tag + "> allowed only: '" + strings.Join(allowedTagNames, "', '") + "'")
+				unclosed = &HtmlBlock{Attrs: token.Attr, Tag: tag}
+				parsed[tag] = unclosed
+				break
+			} else if primary {
+				err = errors.New("Cannot open <" + tag + "> without closing </" + unclosed.Tag + "> first")
 				return
 			}
-
-			if current == unclosed {
-				current.InnerHTML += string(tokenizer.Raw())
-			} else if unclosed != nil {
-				err = errors.New("cannot open <" + tag + "> tag with unclosed <" + unclosed.Tag + "> tag")
-				return
-			}
+			unclosed.InnerHTML += string(tokenizer.Raw())
 
 		case html.EndTagToken:
-			tag, _ := tokenizer.TagName()
+			btag, _ := tokenizer.TagName()
+			tag := string(btag)
 
-			if current != nil {
-				if strings.ToLower(string(tag)) == current.Tag {
-					current = nil
-				} else {
-					current.InnerHTML += string(tokenizer.Raw())
-				}
-			} else {
-				err = errors.New("cannot close <" + string(tag) + "> tag, missing opening")
+			if unclosed == nil {
+				err = errors.New("Cannot close <" + tag + "> tag, missing opening")
 				return
 			}
-
+			if strings.ToLower(tag) == unclosed.Tag {
+				unclosed = nil
+			} else if !rgx.Match(btag) {
+				unclosed.InnerHTML += string(tokenizer.Raw())
+			} else {
+				err = errors.New("Cannot close </" + tag + "> wihout opening <" + unclosed.Tag + "> first")
+				return
+			}
 		default:
-			if current != nil {
-				current.InnerHTML += string(tokenizer.Raw())
+			if unclosed != nil {
+				unclosed.InnerHTML += string(tokenizer.Raw())
 			}
 		}
 	}
 
 	// handling tokenization error
-	if err = tokenizer.Err(); err == io.EOF {
+	if unclosed != nil {
+		err = errors.New("Missing closing </" + unclosed.Tag + ">")
+	} else if err = tokenizer.Err(); err == io.EOF {
 		err = nil
-	} else if err != nil {
-		return
 	}
-
 	return
 }
