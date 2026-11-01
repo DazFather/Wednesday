@@ -36,6 +36,12 @@ func NewTemplateData(s Settings) *TemplateData {
 }
 
 func (td *TemplateData) AddComponent(c Component) (err error) {
+	for _, existing := range td.components {
+		if existing.Name == c.Name {
+			return fmt.Errorf("duplicate component name %q", c.Name)
+		}
+	}
+
 	switch c.Type {
 	case static:
 		_, err = td.collected.New("wed-static-" + c.Name).Parse(c.WrappedStaticHTML())
@@ -152,8 +158,16 @@ func (td *TemplateData) Walk() (errch chan error) {
 			case ".tmpl":
 				if content, err := os.ReadFile(path); err != nil {
 					errch <- fmt.Errorf("cannot read page template %q: %w", path, err)
-				} else if _, err := td.newPage(name).Parse(string(content)); err != nil {
-					errch <- fmt.Errorf("cannot parse page template %q: %w", path, err)
+				} else {
+					for _, p := range td.pages {
+						if p.Name() == name {
+							errch <- fmt.Errorf("duplicate page name %q: %q conflicts with an already loaded page", name, path)
+							return nil
+						}
+					}
+					if _, err := td.newPage(name).Parse(string(content)); err != nil {
+						errch <- fmt.Errorf("cannot parse page template %q: %w", path, err)
+					}
 				}
 			case ".wed.html":
 				if content, err := os.ReadFile(path); err != nil {

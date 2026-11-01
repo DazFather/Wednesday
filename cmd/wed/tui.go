@@ -85,8 +85,8 @@ func mainUsage() {
 
 Commands:
 
-`, magenta.Paint(" build "), `Compile the project into a static site
-   --`, cyan.Paint("mini"), ` minify each site page styles and scripts into single import
+`, magenta.Paint(" build "), `Compile the project into a static site`, gray.Embed(`
+   --`, cyan.Paint("mini"), ` minify each site page styles and scripts into single import`), `
 
 `, magenta.Paint(" init "), `Generate a default project `, gray.Embed(`
    [`, cyan.Paint("mount"), `] directory to put the project into`), `

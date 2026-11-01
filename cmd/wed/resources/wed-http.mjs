@@ -61,7 +61,7 @@ export class HttpClient {
 		}
 		
 		const std = this.options
-		this.#opt = { 
+		this.#opt = {
 			...std,
 			...opt,
 			headers: { ...std.headers, ...(opt?.headers ?? {}) }
@@ -79,7 +79,7 @@ export class HttpClient {
 
 	/**
 	 * Lightweight, customizable HTTP client wrapper around the Fetch API.
-	 */	
+	 */
 	timeout = 10 * 1000;
 
 	#preprocess = req => {
@@ -307,7 +307,7 @@ export class HttpClient {
  * @returns {FragmentHandler}
  */
 export function useFragment(url, opt = {}, init = null) {
-	const cached = null 
+	const cached = null
 	
 	const load = async () => {
 		if (cached) return cached
@@ -333,7 +333,7 @@ export function useFragment(url, opt = {}, init = null) {
 	}
 
 	const clone = !init
-		? async () => await laod()
+		? async () => await load()
 		: async () => {
 			const frag = await load();
 			init(frag);

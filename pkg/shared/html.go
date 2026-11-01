@@ -71,7 +71,7 @@ func ParsePlainHtml(r io.Reader) (parsed map[string]*HtmlBlock, err error) {
 			} else if !rgx.Match(btag) {
 				unclosed.InnerHTML += string(tokenizer.Raw())
 			} else {
-				err = errors.New("Cannot close </" + tag + "> wihout opening <" + unclosed.Tag + "> first")
+				err = errors.New("Cannot close </" + tag + "> without opening <" + unclosed.Tag + "> first")
 				return
 			}
 		default:

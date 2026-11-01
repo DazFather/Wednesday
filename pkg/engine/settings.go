@@ -117,7 +117,7 @@ func (s Settings) SSEClientTag() string {
 					console.error("Error when connecting with live server")
 					console.error(err)
 					if (i >= 3) {
-						console.log("Closing live server connection after 3 attempts, refresh manually to se changes")
+						console.log("Closing live server connection after 3 attempts, refresh manually to see changes")
 						connection.close()
 					}
 				}

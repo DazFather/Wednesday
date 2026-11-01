@@ -111,14 +111,16 @@ When using ECMAScript modules the current script will be imported directly in th
 
 .SS style \fI(optional)\fR
 A pseudo-HTML tag containing styles scoped to the component.
-Wednesday automatically wraps all CSS rules in a selector like `.<componentname>-component` to ensure style encapsulation.
+Wednesday automatically wraps all CSS rules in a selector like `.<componentname>-component` to ensure style encapsulation, using native CSS nesting.
+This keeps component styles isolated, but because of that scoping, rules that must stay at the root of the stylesheet are not supported inside a component yet: `@keyframes`, `@font-face`, and `:root` selectors end up nested under the component selector and lose their global meaning.
+Conditional at-rules such as `@media` and `@supports` are fine because they are valid when nested.
 
 If non-empty, a `.css` file is generated with the same name as the component.
 All styles are imported in the page head by default.
 
 
 .SH TEMPLATE ENGINE
-As mentioned earlier, Wednesday uses Go’s `html/template` engine and extends it with the following functions:
+As mentioned earlier, Wednesday uses Go\(aqs `html/template` engine and extends it with the following functions:
 
 .TP
 .B use \(dq<component>\(dq
@@ -135,7 +137,7 @@ Used in a pipeline with use to pass data:
 }}
 .EE
 Values can be accessed inside the \fIcomponent\fR with:
-.B{{ .Props <key> <default> }}
+.B {{ .Props <key> <default> }}
 .EX .\" html
 <li><em>mentor:</em> <span>{{ .Props "NicoNex" }}</span></li>
 <li><em>mentee:</em> <span>{{ .Props "DazFather" "t.me/DazFather" }}</span></li>
@@ -146,7 +148,7 @@ Default value is optional on static component but mandatory on hybrid ones, as i
 .B hold \(dq<child-component>\(dq \(dq<child-component2>\(dq
 Registers one or more components for later injection using `drop`:
 .EX
-{{ use "modal" hold "confirm-btn" "reject-btn" }}
+{{ use "modal" hold ( "confirm-btn" "reject-btn" ) }}
 .EE
 
 .TP
@@ -180,6 +182,11 @@ Each template is transformed into a complete HTML page with the same base name.
 
 As with components, template pages can be placed anywhere within the input directory and use the same template engine.
 However, they support additional syntax to manage resource imports more explicitly:
+
+.TP
+.B {!{ page \(dqpath/file.html\(dq }!}
+Writes the generated page to the given path relative to the output directory.
+Asset links are relative to the page location.
 
 .TP
 .B {!{ import \(dqdynamics\(dq }!}
@@ -270,7 +277,7 @@ The optional \fIinit\fR callback can customize each clone before insertion.
 Here a small example:
 
 .EX .\" javascript
-const { clone } = useTemplate("todo-item", node => {
+const { clone } = useTemplate("todo-item-component", node => {
   node._binds = useBinds(node)
   return node
 })

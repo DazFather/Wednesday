@@ -60,7 +60,7 @@ The input is totally optional.
 ## Requirements
 
 * Your project must include a valid Wednesday project (e.g. created with `wed init`)
-* The output directory defaults to the same as `wed build` (`dist/`, unless overridden)
+* The output directory defaults to the same as `wed build` (`build/`, unless overridden)
 
 ---
 

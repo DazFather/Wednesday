@@ -153,10 +153,8 @@ Wednesday gots you cover, simply add the attribute `type="dynamic"` to the html 
 > By default Wednesday will interpret an empty or missing _type_ attribute as _static_
 > This is a precise strategy to improve client speed and reduce state management to only when necessary
   
-In this way the html code will be wrapped again on a [template tag](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) having as the only attribute an _id_ with the component name as the value such as `<template id="pippo">...</template>`.
-This template can be insert anywhere just by using `{{ dynamic "component-name" }}`
-> In praticular this template call accepts a variadic number of template names.
-> It's possible to pass only the needed template_s_ or nothing to import them all
+In this way the html code will be wrapped again on a [template tag](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) having as the only attribute an _id_ with the component name plus `-component` as the value, such as `<template id="pippo-component">...</template>`.
+Use `{!{ import "dynamics" }!}` to emit the dynamic component templates needed by the page.
 
 At this point by manipulating the DOM in the standard way is possible to insert the template content anywhere
 > There is also an utility function [useTemplate](#useTemplate) that might cover many cases and help reduce the boilerplate
@@ -266,7 +264,7 @@ Retrieves a template by it's id and provides methods to facilitate content inser
     </div>
 </html>
 <script>
-    const { clone: newItem } = useTemplate("todo-item", templ => {
+    const { clone: newItem } = useTemplate("todo-item-component", templ => {
         templ._binds = useBinds(templ)
         return templ
     })
