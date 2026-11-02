@@ -26,7 +26,7 @@ func validHTML(content string) error {
 	return dec.Decode(new(interface{}))
 }
 
-func (s Settings) minifyJS(page string, mod ModuleType, entries []string, defers func(string) bool) (string, error) {
+func (s Settings) minifyJS(page string, mod ModuleType, entries []string) ([]string, error) {
 	var opt = esbuild.BuildOptions{
 		EntryPoints:       entries,
 		Bundle:            true,
@@ -73,17 +73,17 @@ func (s Settings) minifyJS(page string, mod ModuleType, entries []string, defers
 		if s.Minify {
 			spec = "single file"
 		}
-		return "", fmt.Errorf("%d esbuild errors douring %s JS minification of page %s: %w", size, spec, page, errors.Join(errs...))
+		return nil, fmt.Errorf("%d esbuild errors douring %s JS minification of page %s: %w", size, spec, page, errors.Join(errs...))
 	}
 
-	var output strings.Builder
+	var assets []string
 	for _, f := range res.OutputFiles {
 		if name := filepath.Base(f.Path); strings.ToLower(filepath.Ext(name)) != ".map" {
-			output.WriteString(s.ScriptTag(name, defers(name), &mod))
+			assets = append(assets, name)
 		}
 	}
 
-	return output.String(), nil
+	return assets, nil
 }
 
 func (s Settings) minifyCSS(page string, entries []string) ([]string, error) {
@@ -128,4 +128,33 @@ func (s Settings) minifyCSS(page string, entries []string) ([]string, error) {
 	}
 
 	return output, nil
+}
+
+func (p *page) assetURL(asset string) string {
+	prefix, err := filepath.Rel(filepath.Dir(p.Location), ".")
+	if err != nil || prefix == "." {
+		return "./" + asset
+	}
+	return filepath.ToSlash(prefix) + "/" + asset
+}
+
+func (p *page) StyleURL(name string) string {
+	return p.assetURL(p.Settings.StyleURL(name))
+}
+
+func (p *page) ScriptURL(name string) string {
+	return p.assetURL(p.Settings.ScriptURL(name))
+}
+
+func (p *page) StyleTag(name string) string {
+	return `<link rel="stylesheet" href="` + p.StyleURL(name) + `" />`
+}
+
+func (p *page) ScriptTag(name string, deferred bool, modType ModuleType) string {
+	d := ""
+	if deferred {
+		d = "defer "
+	}
+
+	return `<script ` + d + `type="` + string(modType) + `" src="` + p.ScriptURL(name) + `"></script>`
 }

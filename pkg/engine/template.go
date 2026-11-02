@@ -53,7 +53,7 @@ func (td *TemplateData) AddComponent(c Component) (err error) {
 	case dynamic:
 		_, err = td.collected.New("wed-dynamic-" + c.Name).Parse(c.WrappedDynamicHTML())
 	default:
-		return fmt.Errorf("invalid type %s", c.Type)
+		return fmt.Errorf("%w allowed only 'static' (default), 'dynamic' and 'hybrid'", ErrInvalidTypeAttr)
 	}
 
 	if err == nil {

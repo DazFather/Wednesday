@@ -26,7 +26,7 @@ func (td *TemplateData) newPage(name string) *page {
 		components: &td.components,
 		Settings:   &td.Settings,
 		collected:  &td.collected,
-		Location:   name + ".html",
+		Location:   filepath.Clean(name + ".html"),
 	}
 	p.Template = template.New(name).Funcs(template.FuncMap{
 		"list": func(v ...any) []any { return v },
@@ -104,11 +104,12 @@ func (p *page) genImportScript(components []*Component) (func() template.HTML, e
 	var (
 		scripts, preScripts []string
 		modules, preModules []string
-		tags                = `<script type="text/javascript" src="` + p.ScriptURL("wed-utils") + `"></script>`
+		tags                strings.Builder
 	)
 
+	tags.WriteString(p.ScriptTag("wed-utils", false, noModule))
 	if p.LiveServer != "" {
-		tags += p.SSEClientTag()
+		tags.WriteString(p.SSEClientTag())
 	}
 
 	for _, c := range components {
@@ -133,45 +134,32 @@ func (p *page) genImportScript(components []*Component) (func() template.HTML, e
 	}
 
 	if len(scripts) > 0 {
-		var def func(n string) bool
-		switch preScripts = util.Compact(preScripts); len(preScripts) {
-		case 0:
-			def = func(n string) bool { return true }
-		case 1:
-			def = func(n string) bool { return n != preScripts[0] }
-		default:
-			def = func(n string) bool { return !slices.Contains(preScripts, n) }
-		}
-
-		tag, err := p.minifyJS(p.Name(), noModule, util.Compact(scripts), def)
+		preScripts = util.Compact(preScripts)
+		assets, err := p.minifyJS(p.Name(), noModule, util.Compact(scripts))
 		if err != nil {
 			return nil, err
 		}
-		tags += tag
+		for _, asset := range assets {
+			tags.WriteString(p.ScriptTag(asset, !slices.Contains(preScripts, asset), noModule))
+		}
 	}
 
 	if len(modules) > 0 {
-		var def func(n string) bool
-		switch preModules = util.Compact(preModules); len(preModules) {
-		case 0:
-			def = func(n string) bool { return true }
-		case 1:
-			def = func(n string) bool { return n != preModules[0] }
-		default:
-			def = func(n string) bool { return !slices.Contains(preModules, n) }
-		}
-
-		tag, err := p.minifyJS(p.Name(), ecmaModule, util.Compact(modules), def)
+		preModules = util.Compact(preModules)
+		assets, err := p.minifyJS(p.Name(), ecmaModule, util.Compact(modules))
 		if err != nil {
 			return nil, err
 		}
-		tags += `<script type="importmap">{ "imports": {
+		tags.WriteString(`<script type="importmap">{ "imports": {
 	"@wed/utils": "` + p.ScriptURL("wed-utils.mjs") + `",
 	"@wed/http": "` + p.ScriptURL("wed-http.mjs") + `"
-}}</script>` + tag
+}}</script>`)
+		for _, asset := range assets {
+			tags.WriteString(p.ScriptTag(asset, !slices.Contains(preModules, asset), ecmaModule))
+		}
 	}
 
-	return func() template.HTML { return template.HTML(tags) }, nil
+	return func() template.HTML { return template.HTML(tags.String()) }, nil
 }
 
 func (p *page) importTemplate() (*template.Template, error) {
@@ -239,7 +227,7 @@ func (p *page) importTemplate() (*template.Template, error) {
 				return
 			},
 			"page": func(val string) error {
-				p.Location = val
+				p.Location = filepath.Clean(val)
 				return nil
 			},
 		})
