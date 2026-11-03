@@ -190,27 +190,19 @@ func (td *TemplateData) Walk() (errch chan error) {
 	return
 }
 
-func Build(s Settings) chan error {
-	var (
-		td    = NewTemplateData(s)
-		errch = make(chan error)
-	)
+func Build(s Settings, errch chan error) {
+	var td = NewTemplateData(s)
 
-	go func() {
-		defer close(errch)
-		for _, fn := range []func() chan error{td.Walk, td.Build} {
-			failed := false
-			for err := range fn() {
-				errch <- err
-				if !failed {
-					failed = true
-				}
-			}
-			if failed {
-				return
+	for _, fn := range []func() chan error{td.Walk, td.Build} {
+		failed := false
+		for err := range fn() {
+			errch <- err
+			if !failed {
+				failed = true
 			}
 		}
-	}()
-
-	return errch
+		if failed {
+			return
+		}
+	}
 }

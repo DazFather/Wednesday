@@ -17,8 +17,39 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+func defAssets() map[string][]byte {
+	return map[string][]byte{
+		settings.StylePath("wed-style"):      defStyleContent,
+		settings.ScriptPath("wed-utils.js"):  defScriptContent,
+		settings.ScriptPath("wed-utils.mjs"): defScriptModuleContent,
+		settings.ScriptPath("wed-http.mjs"):  defHttpScriptModuleContent,
+	}
+}
+
 func cutExt(s string) string {
 	return s[:len(s)-len(filepath.Ext(s))]
+}
+
+func autoheal(path string) error {
+	path = filepath.Clean(path)
+
+	for _, subdir := range []string{"style", "script"} {
+		if err := os.MkdirAll(filepath.Join(settings.OutputDir, subdir), 0755); err != nil {
+			return err
+		}
+	}
+
+	assets := defAssets()
+	if content, found := assets[path]; found {
+		return os.WriteFile(path, content, 0644)
+	}
+
+	for name, content := range assets {
+		if err := os.WriteFile(name, content, 0644); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func getWedConfigDir(pices ...string) (dir string, err error) {
@@ -61,52 +92,57 @@ func defaultShell() (sh, flag string) {
 	return
 }
 
-func watch(rootdir, builddir string, notify func() error) error {
-	var watcher, err = fsnotify.NewWatcher()
-	if err != nil {
-		return err
+func watch(rootdir, builddir string, stop <-chan bool) (<-chan string, error) {
+
+	isInsideDir := func(path string) bool {
+		rel, err := filepath.Rel(builddir, path)
+		return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 	}
-	defer watcher.Close()
 
-	err = filepath.Walk(rootdir, func(path string, info os.FileInfo, e error) error {
-		if e != nil {
-			return e
-		}
+	isNotAssetDir := func(path string) bool {
+		prefix := builddir + string(filepath.Separator)
+		return path != builddir && path != prefix+"style" && path != prefix+"script"
+	}
 
-		if info.IsDir() {
-			if path == builddir {
-				return filepath.SkipDir
+	stopHeal, stopBuild := make(chan bool), make(chan bool)
+	go func() {
+		for v := range stop {
+			if v {
+				stopHeal <- true
+				stopBuild <- true
 			}
-			watcher.Add(path)
 		}
-		return nil
-	})
+	}()
 
-	for err == nil {
-		select {
-		case event, ok := <-watcher.Events:
-			if !ok {
-				continue
-			}
+	notifyHeal, err := shared.WatchDir(builddir, isNotAssetDir, stopHeal)
+	if err != nil {
+		return nil, err
+	}
 
-			if event.Op.Has(fsnotify.Create) {
-				var info os.FileInfo
-				if info, err = os.Stat(event.Name); err == nil && info.IsDir() && event.Name != builddir {
-					watcher.Add(event.Name)
+	notifyBuild, err := shared.WatchDir(rootdir, isInsideDir, stopBuild)
+	if err != nil {
+		return nil, err
+	}
+
+	notify := make(chan string)
+	go func() {
+		defer close(notify)
+		for event := range notifyBuild {
+			notify <- event.Name
+		}
+	}()
+
+	go func() {
+		for event := range notifyHeal {
+			if event.Op.Has(fsnotify.Remove) || event.Op.Has(fsnotify.Rename) {
+				if err := autoheal(event.Name); err != nil {
+					panic(err)
 				}
 			}
-			err = notify()
-		case e, ok := <-watcher.Errors:
-			if !ok {
-				continue
-			}
-			if e != nil {
-				err = e
-			}
 		}
-	}
+	}()
 
-	return err
+	return notify, nil
 }
 
 func useSSE(buildCh <-chan []error) {
@@ -129,91 +165,107 @@ func useSSE(buildCh <-chan []error) {
 	}))
 }
 
-func each(reload time.Duration, rootdir, builddir string, notify func() error) error {
+func each(reload time.Duration, rootdir, builddir string, stop <-chan bool) (<-chan string, error) {
+	var notify = make(chan string)
 	var tick = time.NewTicker(reload)
-	defer tick.Stop()
+	assets := defAssets()
 
-	latest := time.Now().Unix()
+	go func() {
+		if v := <-stop; v {
+			tick.Stop()
+			close(notify)
+		}
+	}()
 
-	for range tick.C {
-		edited := false
+	go func() {
+		latest := time.Now().Unix()
 
-		err := filepath.Walk(rootdir, func(path string, info os.FileInfo, e error) error {
-			if e != nil {
-				return e
-			}
-
-			if !info.IsDir() {
-				if tfile := info.ModTime().Unix(); tfile > latest {
-					latest = tfile
-					edited = true
-					return filepath.SkipAll
+		for range tick.C {
+			err := filepath.Walk(rootdir, func(path string, info os.FileInfo, e error) error {
+				if e != nil {
+					return e
 				}
-			} else if path == builddir {
-				return filepath.SkipDir
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
 
-		if edited {
-			if err := notify(); err != nil {
-				return err
+				if !info.IsDir() {
+					if tfile := info.ModTime().Unix(); tfile > latest {
+						latest = tfile
+						notify <- path
+						return filepath.SkipAll
+					}
+				} else if path == builddir {
+					return filepath.SkipDir
+				}
+				return nil
+			})
+			if err != nil {
+				tick.Stop()
+				close(notify)
+				return
+			}
+
+			for name := range assets {
+				if _, err := os.Stat(name); err != nil {
+					if err = autoheal(name); err != nil {
+						panic(err)
+					}
+				}
 			}
 		}
+	}()
 
-	}
-	return nil
+	return notify, nil
 }
 
 func build() chan error {
-	return engine.Build(settings.FileSettings.Settings)
+	errch := make(chan error)
+	go func() {
+		defer close(errch)
+		engine.Build(settings.FileSettings.Settings, errch)
+	}()
+	return errch
 }
 
-func liveReload() chan []error {
+func liveReload(stop <-chan bool) chan []error {
 	var (
-		errch, ssech = make(chan []error), make(chan []error)
-		prev         string
+		notify <-chan string
+		err    error
 	)
-
-	reload := func() error {
-		var (
-			errs []error
-			serr string
-		)
-		for err := range build() {
-			errs = append(errs, err)
-			serr += err.Error()
-		}
-
-		if serr != prev {
-			errch <- errs
-			ssech <- errs
-			prev = serr
-		} else if serr == "" {
-			ssech <- errs
-		}
-		return nil
+	if *settings.reload == 0 {
+		notify, err = watch(settings.InputDir, settings.OutputDir, stop)
+	} else {
+		notify, err = each(*settings.reload, settings.InputDir, settings.OutputDir, stop)
 	}
 
+	errch := make(chan []error)
+	if err != nil {
+		errch <- []error{err}
+		close(errch)
+		return errch
+	}
+
+	ssech := make(chan []error)
 	useSSE(ssech)
 
 	go func() {
 		defer close(errch)
 		defer close(ssech)
 
-		var err error
-		if *settings.reload == 0 {
-			if err = watch(settings.InputDir, settings.OutputDir, reload); err != nil {
-				err = fmt.Errorf("Live server stopped working cause %w", err)
+		prev := ""
+		for range notify {
+			errs, serr := []error{}, ""
+
+			for err := range build() {
+				errs = append(errs, err)
+				serr += err.Error()
 			}
-		} else if err = each(*settings.reload, settings.InputDir, settings.OutputDir, reload); err != nil {
-			err = fmt.Errorf("Live server stopped working cause %w", err)
-		}
-		if err != nil {
-			errch <- []error{err}
+
+			if serr != prev {
+				errch <- errs
+				ssech <- errs
+				prev = serr
+			} else if serr == "" {
+				ssech <- errs
+			}
 		}
 	}()
 

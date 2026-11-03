@@ -28,30 +28,48 @@ var (
 )
 
 func doInit() (err error) {
-	m := map[string][]byte{
-		settings.StylePath("wed-style"):                defStyleContent,
-		settings.ScriptPath("wed-utils.js"):            defScriptContent,
-		settings.ScriptPath("wed-utils.mjs"):           defScriptModuleContent,
-		settings.ScriptPath("wed-http.mjs"):            defHttpScriptModuleContent,
-		filepath.Join(settings.InputDir, "index.tmpl"): indexTemplate,
-	}
+	m := defAssets()
+	m[filepath.Join(settings.InputDir, "index.tmpl")] = indexTemplate
+	m[filepath.Join(settings.InputDir, "app.wed.html")] = defaultAppComponent()
 
 	for name, content := range m {
-		if err = os.MkdirAll(filepath.Dir(name), 0755); err != nil {
-			return
+		if dir := filepath.Dir(name); dir != "." {
+			if err = os.MkdirAll(dir, 0755); err != nil {
+				return
+			}
 		}
 		if err = os.WriteFile(name, content, 0644); err != nil {
 			return
 		}
 	}
 
-	if err = os.WriteFile(filepath.Join(settings.InputDir, "app.wed.html"), defaultAppComponent(), 0644); err == nil {
-		printlnDone("init", "Successfully created scaffolding project at", gray.Paint(settings.InputDir))
-	}
+	printlnDone("init", "Successfully created scaffolding project at", gray.Paint(settings.InputDir))
 	return
 }
 
 func doBuild() (err error) {
+	var errs []error
+	for name, content := range defAssets() {
+		if dir := filepath.Dir(name); dir != "." {
+			if e := os.MkdirAll(dir, 0755); e != nil {
+				errs = append(errs, e)
+			}
+		}
+		if _, e := os.Stat(name); e != nil && os.IsNotExist(e) {
+			hint(gray.Paint("Detected missing assets '", name, "' recrating it\n"))
+			if e = os.WriteFile(name, content, 0644); e != nil {
+				errs = append(errs, e)
+			}
+		}
+	}
+	if n := len(errs); n > 0 {
+		for i, err := range errs {
+			fmt.Println(red.Paint(i), err)
+			printlnStackTrace(err)
+		}
+		return fmt.Errorf("Failed to recreate missing assets, errors: %d", n)
+	}
+
 	i := 0
 	for err := range build() {
 		i++
@@ -59,7 +77,7 @@ func doBuild() (err error) {
 		printlnStackTrace(err)
 	}
 	if i > 0 {
-		return fmt.Errorf("Failed to build site errors: %d", i)
+		return fmt.Errorf("Failed to build site, errors: %d", i)
 	}
 
 	printlnDone("build", "Site successfully built at", gray.Paint(settings.OutputDir))
@@ -73,7 +91,7 @@ func doServe() error {
 
 	if settings.reload != nil {
 		go func() {
-			for errs := range liveReload() {
+			for errs := range liveReload(nil) {
 				switch len(errs) {
 				case 0:
 					printlnDone("build", "Site successfully rebuilt, no error found\n")
