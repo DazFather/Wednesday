@@ -307,38 +307,47 @@ export class HttpClient {
  * @returns {FragmentHandler}
  */
 export function useFragment(url, opt = {}, init = null) {
-	const cached = null
-	
-	const load = async () => {
-		if (cached) return cached
+	let cachedNodes = null
 
-		const response = await fetch(url, opt);
+	const load = async () => {
+		if (cachedNodes) return cachedNodes
+
+		const response = await fetch(url, opt)
 		if (!response.ok) throw new HttpError(response)
 
-		const htmlText = await response.text();
+		const htmlText = await response.text()
 
-		const content = document.createElement("div");
+		const content = document.createElement("div")
 		content.innerHTML = htmlText
 
 		const body = content.querySelector("body")
 			?? content.querySelector("html")
 			?? content
 
-		const fragment = new DocumentFragment();
+		cachedNodes = []
 		for (let node of body.childNodes) {
-			fragment.appendChild(node.cloneNode(true))
+			cachedNodes.push(node.cloneNode(true))
 		}
 
-		return cached = fragment;
+		return cachedNodes
 	}
 
+	const use = async () => {
+		const nodes = await load();
+		const fragment = new DocumentFragment();
+		for (let node of nodes) {
+			fragment.appendChild(node.cloneNode(true));
+		}
+		return fragment;
+	};
+
 	const clone = !init
-		? async () => await load()
+		? use
 		: async () => {
-			const frag = await load();
-			init(frag);
-			return frag;
-		};
+			const frag = await use()
+			init(frag)
+			return frag
+		}
 
 	return {
 		clone,
