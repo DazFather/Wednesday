@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -89,9 +90,16 @@ func doServe() error {
 		return err
 	}
 
+	server, han := serveDir(settings.port, settings.OutputDir)
+	ctx, stop := useStopper(nil, server.Shutdown, func(_ context.Context) error {
+		hint(gray.Paint("\nGracefully shutting down server\n"))
+		return nil
+	})
+	defer stop()
+
 	if settings.reload != nil {
 		go func() {
-			for errs := range liveReload(nil) {
+			for errs := range liveReload(ctx, han) {
 				switch len(errs) {
 				case 0:
 					printlnDone("build", "Site successfully rebuilt, no error found\n")
@@ -109,10 +117,11 @@ func doServe() error {
 		}()
 	}
 
-	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("./"+settings.OutputDir))))
-
 	hint("Listening at: ", gray.Paint(settings.port), "\nServing directory: ", gray.Paint(settings.OutputDir), "\n")
-	return http.ListenAndServe(settings.port, nil)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return err
+	}
+	return nil
 }
 
 func doRun() error {

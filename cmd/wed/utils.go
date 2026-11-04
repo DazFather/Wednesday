@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"text/template"
 	"time"
 
@@ -92,7 +95,7 @@ func defaultShell() (sh, flag string) {
 	return
 }
 
-func watch(rootdir, builddir string, stop <-chan bool) (<-chan string, error) {
+func watch(ctx context.Context, rootdir, builddir string) (<-chan string, error) {
 
 	isInsideDir := func(path string) bool {
 		rel, err := filepath.Rel(builddir, path)
@@ -104,22 +107,12 @@ func watch(rootdir, builddir string, stop <-chan bool) (<-chan string, error) {
 		return path != builddir && path != prefix+"style" && path != prefix+"script"
 	}
 
-	stopHeal, stopBuild := make(chan bool), make(chan bool)
-	go func() {
-		for v := range stop {
-			if v {
-				stopHeal <- true
-				stopBuild <- true
-			}
-		}
-	}()
-
-	notifyHeal, err := shared.WatchDir(builddir, isNotAssetDir, stopHeal)
+	notifyHeal, err := shared.WatchDir(builddir, isNotAssetDir)
 	if err != nil {
 		return nil, err
 	}
 
-	notifyBuild, err := shared.WatchDir(rootdir, isInsideDir, stopBuild)
+	notifyBuild, err := shared.WatchDir(rootdir, isInsideDir)
 	if err != nil {
 		return nil, err
 	}
@@ -127,16 +120,20 @@ func watch(rootdir, builddir string, stop <-chan bool) (<-chan string, error) {
 	notify := make(chan string)
 	go func() {
 		defer close(notify)
-		for event := range notifyBuild {
-			notify <- event.Name
+		for event := range notifyBuild.Iter(ctx) {
+			select {
+			case notify <- event.Name:
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 
 	go func() {
-		for event := range notifyHeal {
+		for event := range notifyHeal.Iter(ctx) {
 			if event.Op.Has(fsnotify.Remove) || event.Op.Has(fsnotify.Rename) {
 				if err := autoheal(event.Name); err != nil {
-					panic(err)
+					println("AUTOHEAL ERROR -", err.Error())
 				}
 			}
 		}
@@ -145,7 +142,7 @@ func watch(rootdir, builddir string, stop <-chan bool) (<-chan string, error) {
 	return notify, nil
 }
 
-func useSSE(buildCh <-chan []error) {
+func useSSE(srv *http.ServeMux, buildCh <-chan []error) {
 	var hub shared.SSEHandler
 
 	go func() {
@@ -159,28 +156,30 @@ func useSSE(buildCh <-chan []error) {
 		}
 	}()
 
-	http.HandleFunc(settings.LiveServer, hub.Handler(&shared.SSEHandlerOpt{
+	srv.HandleFunc("GET "+settings.LiveServer, hub.Handler(&shared.SSEHandlerOpt{
 		CrossOriginHeader: "*",
 		HandleErr:         func(e error) { hint("[Live Server]", e) },
 	}))
+
 }
 
-func each(reload time.Duration, rootdir, builddir string, stop <-chan bool) (<-chan string, error) {
+func each(ctx context.Context, reload time.Duration, rootdir, builddir string) (<-chan string, error) {
 	var notify = make(chan string)
 	var tick = time.NewTicker(reload)
 	assets := defAssets()
 
 	go func() {
-		if v := <-stop; v {
-			tick.Stop()
-			close(notify)
-		}
-	}()
-
-	go func() {
+		defer close(notify)
 		latest := time.Now().Unix()
 
-		for range tick.C {
+		for {
+			select {
+			case <-tick.C:
+			case <-ctx.Done():
+				tick.Stop()
+				return
+			}
+
 			err := filepath.Walk(rootdir, func(path string, info os.FileInfo, e error) error {
 				if e != nil {
 					return e
@@ -189,7 +188,11 @@ func each(reload time.Duration, rootdir, builddir string, stop <-chan bool) (<-c
 				if !info.IsDir() {
 					if tfile := info.ModTime().Unix(); tfile > latest {
 						latest = tfile
-						notify <- path
+						select {
+						case notify <- path:
+						case <-ctx.Done():
+							return filepath.SkipAll
+						}
 						return filepath.SkipAll
 					}
 				} else if path == builddir {
@@ -199,14 +202,13 @@ func each(reload time.Duration, rootdir, builddir string, stop <-chan bool) (<-c
 			})
 			if err != nil {
 				tick.Stop()
-				close(notify)
 				return
 			}
 
 			for name := range assets {
 				if _, err := os.Stat(name); err != nil {
 					if err = autoheal(name); err != nil {
-						panic(err)
+						println("AUTOHEAL ERROR -", err.Error())
 					}
 				}
 			}
@@ -225,30 +227,47 @@ func build() chan error {
 	return errch
 }
 
-func liveReload(stop <-chan bool) chan []error {
+func send[T any](ctx context.Context, ch chan T, val T) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case ch <- val:
+		return true
+	}
+}
+
+func liveReload(ctx context.Context, ssesrv *http.ServeMux) chan []error {
 	var (
 		notify <-chan string
 		err    error
 	)
 	if *settings.reload == 0 {
-		notify, err = watch(settings.InputDir, settings.OutputDir, stop)
+		notify, err = watch(ctx, settings.InputDir, settings.OutputDir)
 	} else {
-		notify, err = each(*settings.reload, settings.InputDir, settings.OutputDir, stop)
+		notify, err = each(ctx, *settings.reload, settings.InputDir, settings.OutputDir)
 	}
 
-	errch := make(chan []error)
 	if err != nil {
+		errch := make(chan []error, 1)
 		errch <- []error{err}
 		close(errch)
 		return errch
 	}
 
-	ssech := make(chan []error)
-	useSSE(ssech)
+	var (
+		errch = make(chan []error)
+		ssech chan []error
+	)
+	if ssesrv != nil {
+		ssech = make(chan []error)
+		useSSE(ssesrv, ssech)
+	}
 
 	go func() {
 		defer close(errch)
-		defer close(ssech)
+		if ssech != nil {
+			defer close(ssech)
+		}
 
 		prev := ""
 		for range notify {
@@ -260,11 +279,13 @@ func liveReload(stop <-chan bool) chan []error {
 			}
 
 			if serr != prev {
-				errch <- errs
-				ssech <- errs
+				send(ctx, errch, errs)
+				if ssech != nil {
+					send(ctx, ssech, errs)
+				}
 				prev = serr
-			} else if serr == "" {
-				ssech <- errs
+			} else if serr == "" && ssech != nil {
+				send(ctx, ssech, errs)
 			}
 		}
 	}()
@@ -283,4 +304,35 @@ func defaultAppComponent() []byte {
 		panic(err)
 	}
 	return buf.Bytes()
+}
+
+func useStopper(c *context.Context, onStopFns ...func(context.Context) error) (context.Context, context.CancelFunc) {
+	if c == nil {
+		bg := context.Background()
+		c = &bg
+	}
+	ctx, stop := signal.NotifyContext(*c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-ctx.Done()
+		for _, fn := range onStopFns {
+			if fn != nil {
+				if err := fn(ctx); err != nil {
+					hint(err)
+				}
+			}
+		}
+
+	}()
+	return ctx, stop
+}
+
+func serveDir(port, outputdir string) (srv *http.Server, han *http.ServeMux) {
+	if han == nil {
+		if han = http.DefaultServeMux; han == nil {
+			han = http.NewServeMux()
+		}
+	}
+	han.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("./"+outputdir))))
+	srv = &http.Server{Addr: settings.port, Handler: han}
+	return
 }

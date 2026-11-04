@@ -6,10 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"slices"
-
-	"github.com/fsnotify/fsnotify"
 )
 
 func getBody(link string) (content []byte, err error) {
@@ -49,59 +46,4 @@ func Compact[T comparable](list []T) []T {
 		}
 	}
 	return res
-}
-
-func WatchDir(dir string, skip func(string) bool, stop <-chan bool) (<-chan fsnotify.Event, error) {
-	var watcher, err = fsnotify.NewWatcher()
-	if err != nil {
-		return nil, err
-	}
-
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, e error) error {
-		if e == nil && info.IsDir() {
-			if skip != nil && skip(path) {
-				return filepath.SkipDir
-			}
-			watcher.Add(path)
-		}
-		return e
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	notify := make(chan fsnotify.Event)
-	go func() {
-		defer close(notify)
-		defer watcher.Close()
-		for err == nil {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					continue
-				}
-				if event.Op.Has(fsnotify.Create) {
-					info, statErr := os.Stat(event.Name)
-					if statErr == nil && info.IsDir() && !skip(event.Name) {
-						watcher.Add(event.Name)
-					}
-				}
-				notify <- event
-			case event, ok := <-watcher.Errors:
-				if !ok {
-					continue
-				}
-				err = event
-			case event, ok := <-stop:
-				if !ok {
-					continue
-				}
-				if event {
-					return
-				}
-			}
-		}
-	}()
-
-	return notify, nil
 }
