@@ -34,6 +34,11 @@ func doInit() (err error) {
 	m[filepath.Join(settings.InputDir, "app.wed.html")] = defaultAppComponent()
 
 	for name, content := range m {
+		if settings.force {
+			hint(gray.Paint("reinitializing ", name, " with default values"), "\n")
+		} else if _, err := os.Stat(name); err == nil {
+			continue
+		}
 		if dir := filepath.Dir(name); dir != "." {
 			if err = os.MkdirAll(dir, 0755); err != nil {
 				return
@@ -44,7 +49,7 @@ func doInit() (err error) {
 		}
 	}
 
-	printlnDone("init", "Successfully created scaffolding project at", gray.Paint(settings.InputDir))
+	printlnDone("init", "Successfully scaffoldings at", gray.Paint(settings.InputDir))
 	return
 }
 

@@ -90,6 +90,7 @@ Commands:
 
 `, magenta.Paint(" init "), `Generate a default project `, gray.Embed(`
    [`, cyan.Paint("mount"), `] directory to put the project into`), `
+   -`, cyan.Paint("f"), ` | --`, cyan.Paint("force"), ` override files if they exists
 
 `, magenta.Paint(" serve "), `Build and serve your project statically via http`, gray.Embed(`
    -`, cyan.Paint("l"), ` | --`, cyan.Paint("live"), ` enable automatic rebuilding or at specified time interval
@@ -174,7 +175,13 @@ Optionally you can specify a directory just after the command.
 If not provided the current working directory will be used instead.
 If provided but do not exist it be created
 
-`, flagsUsage())
+
+Command flags:`, gray.Embed(`
+
+  -`, cyan.Paint("f"), ` | --`, cyan.Paint("force"), ` override files if they exists
+
+
+`), flagsUsage())
 
 }
 

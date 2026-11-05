@@ -29,6 +29,7 @@ type FlagSettings struct {
 	FileSettings
 	download bool
 	quiet    bool
+	force    bool
 }
 
 var settings FlagSettings
@@ -105,11 +106,12 @@ func serveFlags() {
 }
 
 func initFlags() {
-	parseDefault(
-		flag.NewFlagSet("init", flag.ExitOnError),
-		os.Args[2:],
-		initUsage,
-	)
+	var f = flag.NewFlagSet("init", flag.ExitOnError)
+
+	f.BoolVar(&settings.force, "force", false, "override files if they exists")
+	f.BoolVar(&settings.force, "f", false, "shorthand for 'force'")
+
+	parseDefault(f, os.Args[2:], initUsage)
 
 	if settings.arg != "" {
 		settings.InputDir, settings.OutputDir = settings.arg, filepath.Join(settings.arg, settings.OutputDir)
