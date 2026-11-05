@@ -2,9 +2,11 @@ package shared
 
 import (
 	"context"
+	"errors"
 	"iter"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -12,14 +14,17 @@ import (
 type DirWatcher struct {
 	watcher chan fsnotify.Event
 	stopper chan struct{}
+	errch   chan error
+	err     error
+	closefn func()
+}
+
+func (fw DirWatcher) Err() error {
+	return fw.err
 }
 
 func (fw *DirWatcher) Close() {
-	fw.stopper <- struct{}{}
-}
-
-func (fw *DirWatcher) Observe() <-chan fsnotify.Event {
-	return fw.watcher
+	fw.closefn()
 }
 
 func (fw *DirWatcher) emit(event fsnotify.Event) bool {
@@ -31,6 +36,14 @@ func (fw *DirWatcher) emit(event fsnotify.Event) bool {
 	return false
 }
 
+func (fw DirWatcher) Observe() <-chan fsnotify.Event {
+	return fw.watcher
+}
+
+func (fw DirWatcher) Errors() <-chan error {
+	return fw.errch
+}
+
 func (fw *DirWatcher) Iter(ctx context.Context) iter.Seq[fsnotify.Event] {
 	return func(yield func(fsnotify.Event) bool) {
 		defer fw.Close()
@@ -40,6 +53,8 @@ func (fw *DirWatcher) Iter(ctx context.Context) iter.Seq[fsnotify.Event] {
 				if !ok || !yield(event) {
 					return
 				}
+			case <-fw.errch:
+				return
 			case <-ctx.Done():
 				return
 			}
@@ -67,38 +82,51 @@ func WatchDir(dir string, skip func(string) bool) (*DirWatcher, error) {
 		return nil, err
 	}
 
-	var watcher = DirWatcher{
+	var watcher = &DirWatcher{
 		watcher: make(chan fsnotify.Event),
-		stopper: make(chan struct{}),
+		stopper: make(chan struct{}, 1),
+		errch:   make(chan error),
 	}
+	watcher.closefn = sync.OnceFunc(func() {
+		close(watcher.watcher)
+		close(watcher.errch)
+		watcher.stopper <- struct{}{}
+		close(watcher.stopper)
+	})
 
-	go func() {
-		defer fsnw.Close()
-		for err == nil {
-			select {
-			case event, ok := <-fsnw.Events:
-				if !ok {
-					continue
-				}
-				if event.Op.Has(fsnotify.Create) {
-					info, statErr := os.Stat(event.Name)
-					if statErr == nil && info.IsDir() && (skip != nil || !skip(event.Name)) {
-						fsnw.Add(event.Name)
-					}
-				}
-				if watcher.emit(event) {
-					return
-				}
-			case event, ok := <-fsnw.Errors:
-				if !ok {
-					continue
-				}
-				err = event
-			case <-watcher.stopper:
+	go watcher.scan(fsnw, skip)
+
+	return watcher, nil
+}
+
+func (fw *DirWatcher) scan(fsnw *fsnotify.Watcher, skip func(string) bool) {
+	defer fsnw.Close()
+
+	for {
+		select {
+		case event, ok := <-fsnw.Events:
+			if !ok {
 				return
 			}
+			if event.Op.Has(fsnotify.Create) {
+				info, statErr := os.Stat(event.Name)
+				if statErr == nil && info.IsDir() && (skip != nil || !skip(event.Name)) {
+					fsnw.Add(event.Name)
+				}
+			}
+			if fw.emit(event) {
+				return
+			}
+		case event, ok := <-fsnw.Errors:
+			if !ok {
+				continue
+			}
+			if event != nil {
+				fw.err = errors.Join(fw.err, event)
+				fw.errch <- event
+			}
+		case <-fw.stopper:
+			return
 		}
-	}()
-
-	return &watcher, nil
+	}
 }

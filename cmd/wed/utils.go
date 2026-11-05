@@ -121,11 +121,10 @@ func watch(ctx context.Context, rootdir, builddir string) (<-chan string, error)
 	go func() {
 		defer close(notify)
 		for event := range notifyBuild.Iter(ctx) {
-			select {
-			case notify <- event.Name:
-			case <-ctx.Done():
-				return
-			}
+			ctxsend(ctx, notify, event.Name)
+		}
+		if err := notifyBuild.Err(); err != nil {
+			hint(red.Paint(" ! "), " Autodetect changes stopped working: ", err)
 		}
 	}()
 
@@ -133,9 +132,12 @@ func watch(ctx context.Context, rootdir, builddir string) (<-chan string, error)
 		for event := range notifyHeal.Iter(ctx) {
 			if event.Op.Has(fsnotify.Remove) || event.Op.Has(fsnotify.Rename) {
 				if err := autoheal(event.Name); err != nil {
-					println("AUTOHEAL ERROR -", err.Error())
+					hint(red.Paint(" ! "), " Unable to heal ", gray.Paint(event.Name), ", error: ", err)
 				}
 			}
+		}
+		if err := notifyHeal.Err(); err != nil {
+			hint(red.Paint(" ! "), " Autoheal stopped working: ", err)
 		}
 	}()
 
@@ -165,19 +167,29 @@ func useSSE(srv *http.ServeMux, buildCh <-chan []error) {
 
 func each(ctx context.Context, reload time.Duration, rootdir, builddir string) (<-chan string, error) {
 	var notify = make(chan string)
-	var tick = time.NewTicker(reload)
-	assets := defAssets()
 
 	go func() {
+		var (
+			assets = defAssets()
+			tick   = time.NewTicker(reload)
+			latest = time.Now().Unix()
+		)
+		defer tick.Stop()
 		defer close(notify)
-		latest := time.Now().Unix()
 
-		for {
+		for loop := true; loop; {
 			select {
 			case <-tick.C:
 			case <-ctx.Done():
-				tick.Stop()
 				return
+			}
+
+			for name := range assets {
+				if _, err := os.Stat(name); err != nil {
+					if err = autoheal(name); err != nil {
+						hint(red.Paint(" ! "), " Unable to heal ", gray.Paint(name), ", error: ", err)
+					}
+				}
 			}
 
 			err := filepath.Walk(rootdir, func(path string, info os.FileInfo, e error) error {
@@ -191,6 +203,7 @@ func each(ctx context.Context, reload time.Duration, rootdir, builddir string) (
 						select {
 						case notify <- path:
 						case <-ctx.Done():
+							loop = false
 							return filepath.SkipAll
 						}
 						return filepath.SkipAll
@@ -201,17 +214,9 @@ func each(ctx context.Context, reload time.Duration, rootdir, builddir string) (
 				return nil
 			})
 			if err != nil {
-				tick.Stop()
 				return
 			}
 
-			for name := range assets {
-				if _, err := os.Stat(name); err != nil {
-					if err = autoheal(name); err != nil {
-						println("AUTOHEAL ERROR -", err.Error())
-					}
-				}
-			}
 		}
 	}()
 
@@ -227,7 +232,7 @@ func build() chan error {
 	return errch
 }
 
-func send[T any](ctx context.Context, ch chan T, val T) bool {
+func ctxsend[T any](ctx context.Context, ch chan T, val T) bool {
 	select {
 	case <-ctx.Done():
 		return false
@@ -279,13 +284,13 @@ func liveReload(ctx context.Context, ssesrv *http.ServeMux) chan []error {
 			}
 
 			if serr != prev {
-				send(ctx, errch, errs)
+				ctxsend(ctx, errch, errs)
 				if ssech != nil {
-					send(ctx, ssech, errs)
+					ctxsend(ctx, ssech, errs)
 				}
 				prev = serr
 			} else if serr == "" && ssech != nil {
-				send(ctx, ssech, errs)
+				ctxsend(ctx, ssech, errs)
 			}
 		}
 	}()
