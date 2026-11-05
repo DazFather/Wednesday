@@ -16,16 +16,9 @@ func (h *SSEHandler) Broadcast(value string) {
 
 	h.connections.Range(func(ch *chan string, _ struct{}) bool {
 		conns = append(conns, *ch)
+		go func() { *ch <- value }()
 		return true
 	})
-
-	for _, ch := range conns {
-		select {
-		case ch <- value:
-		default:
-			// optional: drop slow client
-		}
-	}
 }
 
 func (h *SSEHandler) connect() *chan string {
