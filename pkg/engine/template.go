@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
 )
 
@@ -147,6 +148,8 @@ func (td *TemplateData) Walk() (errch chan error) {
 		td.InputDir = "."
 	}
 
+	rgx := regexp.MustCompile(`([\w\-]+)(\.tmpl|\.wed.html)`)
+
 	errch = make(chan error)
 	go func() {
 		err := filepath.WalkDir(td.InputDir, func(path string, info fs.DirEntry, err error) error {
@@ -154,7 +157,14 @@ func (td *TemplateData) Walk() (errch chan error) {
 				return nil
 			}
 
-			switch name, ext := splitExt(info.Name()); ext {
+			ext, name := "", ""
+			if pices := rgx.FindStringSubmatch(info.Name()); len(pices) == 3 {
+				name, ext = pices[1], pices[2]
+			} else {
+				return nil
+			}
+
+			switch ext {
 			case ".tmpl":
 				if content, err := os.ReadFile(path); err != nil {
 					errch <- fmt.Errorf("cannot read page template %q: %w", path, err)
