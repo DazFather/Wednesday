@@ -4,10 +4,12 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
-	esbuild "github.com/evanw/esbuild/pkg/api"
+	es "github.com/evanw/esbuild/pkg/api"
 )
 
 func splitExt(name string) (base, ext string) {
@@ -26,107 +28,154 @@ func validHTML(content string) error {
 	return dec.Decode(new(interface{}))
 }
 
-func (s Settings) minifyJS(page string, mod ModuleType, entries []string) ([]string, error) {
-	var opt = esbuild.BuildOptions{
-		EntryPoints:       entries,
-		Bundle:            true,
-		Write:             true,
-		MinifyWhitespace:  true,
-		MinifyIdentifiers: true,
-		MinifySyntax:      true,
-		AllowOverwrite:    true,
-		Sourcemap:         esbuild.SourceMapLinked,
-		Alias: map[string]string{
-			"@wed/utils": "./" + filepath.ToSlash(s.ScriptPath("wed-utils.mjs")),
-			"@wed/http":  "./" + filepath.ToSlash(s.ScriptPath("wed-http.mjs")),
-		},
-		LogLevel: esbuild.LogLevelWarning,
+func (s Settings) bundleJS(opt *es.BuildOptions, mod ModuleType, page string, entries []string) error {
+	outName := page + "-mini"
+	if mod == ecmaModule {
+		outName = page + "-ecma-mini"
 	}
+	opt.Outdir = ""
+	opt.Outfile = s.ScriptPath(outName)
+
+	if len(entries) <= 1 {
+		return nil
+	}
+
+	var b strings.Builder
+
+	if mod == ecmaModule {
+		for _, e := range entries {
+			b.WriteString(`import "./` + filepath.ToSlash(e) + "\";\n")
+		}
+	} else {
+		for i, e := range entries {
+			content, err := os.ReadFile(e)
+			if err != nil {
+				return fmt.Errorf("read JS entry %q for page %q: %w", e, page, err)
+			}
+			if i > 0 {
+				b.WriteString("\n;")
+			}
+			b.Write(content)
+			b.WriteString("\n")
+		}
+	}
+
+	opt.EntryPoints = nil
+	opt.Stdin = &es.StdinOptions{
+		Contents:   b.String(),
+		ResolveDir: ".",
+		Sourcefile: outName + "-bundle.js",
+		Loader:     es.LoaderJS,
+	}
+	return nil
+}
+
+func (s Settings) minifyJS(page string, mod ModuleType, entries []string) ([]string, error) {
+	var opt = defESBuildOpt(entries)
+	opt.Outdir = s.ScriptPath()
 
 	switch mod {
 	case ecmaModule:
-		opt.Format = esbuild.FormatESModule
-		if s.Minify {
-			opt.Outfile = s.ScriptPath(page + "-ecma-mini")
-		} else {
-			opt.Outdir = s.ScriptPath()
+		opt.Format = es.FormatESModule
+		opt.Alias = map[string]string{
+			"@wed/utils": "./" + filepath.ToSlash(s.ScriptPath("wed-utils.mjs")),
+			"@wed/http":  "./" + filepath.ToSlash(s.ScriptPath("wed-http.mjs")),
 		}
 	case noModule:
-		opt.Format = esbuild.FormatDefault
-		if s.Minify {
-			opt.Outfile = s.ScriptPath(page + "-mini")
-		} else {
+		opt.Format = es.FormatDefault
+		if !s.Minify {
 			opt.Bundle = false
-			opt.Alias = nil
-			opt.Outdir = s.ScriptPath()
 		}
 	}
 
-	res := esbuild.Build(opt)
-
-	if size := len(res.Errors); size > 0 {
-		errs := make([]error, size)
-		for i := range res.Errors {
-			errs[i] = errors.New(res.Errors[i].Text)
+	if s.Minify {
+		if err := s.bundleJS(opt, mod, page, entries); err != nil {
+			return nil, err
 		}
+	}
+
+	rgx := regexp.MustCompile(`\w+\.map$`)
+	res, err := esbuild(opt, func(s string) bool { return !rgx.MatchString(s) })
+	if err != nil {
 		spec := "global"
 		if s.Minify {
 			spec = "single file"
 		}
-		return nil, fmt.Errorf("%d esbuild errors douring %s JS minification of page %s: %w", size, spec, page, errors.Join(errs...))
+		return nil, fmt.Errorf("error douring %s JS minification of page %q: %w", spec, page, err)
+	}
+	return res, nil
+}
+
+func (s Settings) bundleCSS(opt *es.BuildOptions, page string, entries []string) {
+	opt.Outfile = s.StylePath(page + "-mini")
+	if len(entries) <= 1 {
+		return
 	}
 
-	var assets []string
-	for _, f := range res.OutputFiles {
-		if name := filepath.Base(f.Path); strings.ToLower(filepath.Ext(name)) != ".map" {
-			assets = append(assets, name)
-		}
+	var b strings.Builder
+	for _, e := range entries {
+		b.WriteString(`@import "./` + filepath.ToSlash(e) + "\";\n")
 	}
-
-	return assets, nil
+	opt.EntryPoints = nil
+	opt.Stdin = &es.StdinOptions{
+		Contents:   b.String(),
+		ResolveDir: ".",
+		Sourcefile: page + "-mini-entry.css",
+		Loader:     es.LoaderCSS,
+	}
 }
 
 func (s Settings) minifyCSS(page string, entries []string) ([]string, error) {
-	var opt = esbuild.BuildOptions{
-		EntryPoints:       entries,
-		Bundle:            true,
-		Write:             true,
-		MinifyWhitespace:  true,
-		MinifyIdentifiers: true,
-		MinifySyntax:      true,
-		AllowOverwrite:    true,
-		Sourcemap:         esbuild.SourceMapLinked,
-		LogLevel:          esbuild.LogLevelWarning,
-	}
+	var opt = defESBuildOpt(entries)
 
 	if s.Minify {
-		opt.Outfile = s.StylePath(page + "-mini")
+		s.bundleCSS(opt, page, entries)
 	} else {
 		opt.Outdir = s.StylePath()
 	}
 
-	res := esbuild.Build(opt)
+	res, err := esbuild(opt, regexp.MustCompile(`\w+\.css$`).MatchString)
+	if err != nil {
+		spec := "global"
+		if s.Minify {
+			spec = "single file"
+		}
+		return nil, fmt.Errorf("error douring %s CSS minification of page %q: %w", spec, page, err)
+	}
+	return res, nil
+}
+
+func defESBuildOpt(entries []string) *es.BuildOptions {
+	return &es.BuildOptions{
+		Write:             true,
+		MinifyWhitespace:  true,
+		MinifyIdentifiers: true,
+		MinifySyntax:      true,
+		AllowOverwrite:    true,
+		Bundle:            true,
+		LogLevel:          es.LogLevelWarning,
+		Sourcemap:         es.SourceMapLinked,
+		EntryPoints:       entries,
+	}
+}
+
+func esbuild(opt *es.BuildOptions, isAllowed func(string) bool) ([]string, error) {
+	res := es.Build(*opt)
 
 	if size := len(res.Errors); size > 0 {
 		errs := make([]error, size)
 		for i := range res.Errors {
 			errs[i] = errors.New(res.Errors[i].Text)
 		}
-
-		spec := "global"
-		if s.Minify {
-			spec = "single file"
-		}
-		return nil, fmt.Errorf("%d esbuild errors douring CSS %s minification of page %s: %w", size, spec, page, errors.Join(errs...))
+		return nil, errors.Join(errs...)
 	}
 
 	var output []string
 	for _, f := range res.OutputFiles {
-		if name := filepath.Base(f.Path); strings.ToLower(filepath.Ext(name)) == ".css" {
-			output = append(output, name)
+		if isAllowed(f.Path) {
+			output = append(output, filepath.Base(f.Path))
 		}
 	}
-
 	return output, nil
 }
 
