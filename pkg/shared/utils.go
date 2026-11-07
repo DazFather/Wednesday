@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 )
 
 func getBody(link string) (content []byte, err error) {
@@ -46,4 +48,17 @@ func Compact[T comparable](list []T) []T {
 		}
 	}
 	return res
+}
+
+func IsOnDir(path, dir string) bool {
+	var err error
+	if path, err = filepath.Abs(path); err != nil {
+		panic(err)
+	}
+	if dir, err = filepath.Abs(dir); err != nil {
+		panic(err)
+	}
+
+	rel, err := filepath.Rel(dir, path)
+	return err == nil && (rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))))
 }

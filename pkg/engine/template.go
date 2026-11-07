@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"sync"
+
+	"github.com/DazFather/Wednesday/pkg/shared"
 )
 
 type TemplateData struct {
@@ -130,7 +132,7 @@ func (td *TemplateData) buildPages(errch chan<- error) {
 	wg.Wait()
 }
 
-func (td *TemplateData) Build() chan error {
+func (td *TemplateData) Build() <-chan error {
 	var errch = make(chan error)
 
 	go func() {
@@ -143,23 +145,37 @@ func (td *TemplateData) Build() chan error {
 	return errch
 }
 
-func (td *TemplateData) Walk() (errch chan error) {
+func (td *TemplateData) Walk() <-chan error {
+	var (
+		splitter  = regexp.MustCompile(`^(.*)(\.tmpl|\.wed\.html)$`)
+		validator = regexp.MustCompile(`^[a-zA-Z_]([\w\-\.]*\w)?$`)
+		errch     = make(chan error)
+	)
+
 	if td.InputDir == "" {
 		td.InputDir = "."
 	}
 
-	rgx := regexp.MustCompile(`([\w\-]+)(\.tmpl|\.wed.html)`)
-
-	errch = make(chan error)
 	go func() {
-		err := filepath.WalkDir(td.InputDir, func(path string, info fs.DirEntry, err error) error {
+		defer close(errch)
+		err := filepath.WalkDir(td.InputDir, func(path string, info fs.DirEntry, e error) error {
+			if e != nil {
+				return e
+			}
 			if info.IsDir() {
+				if shared.IsOnDir(path, td.OutputDir) {
+					return filepath.SkipDir
+				}
 				return nil
 			}
 
 			ext, name := "", ""
-			if pices := rgx.FindStringSubmatch(info.Name()); len(pices) == 3 {
+			if pices := splitter.FindStringSubmatch(info.Name()); len(pices) == 3 {
 				name, ext = pices[1], pices[2]
+				if !validator.MatchString(name) {
+					errch <- fmt.Errorf("invalid file name %q special chars allowed are only '-', '.' and '_'", path)
+					return nil
+				}
 			} else {
 				return nil
 			}
@@ -194,16 +210,15 @@ func (td *TemplateData) Walk() (errch chan error) {
 		if err != nil {
 			errch <- err
 		}
-		close(errch)
 	}()
 
-	return
+	return errch
 }
 
 func Build(s Settings, errch chan error) {
 	var td = NewTemplateData(s)
 
-	for _, fn := range []func() chan error{td.Walk, td.Build} {
+	for _, fn := range []func() <-chan error{td.Walk, td.Build} {
 		failed := false
 		for err := range fn() {
 			errch <- err
