@@ -110,7 +110,7 @@ func (fw *DirWatcher) scan(fsnw *fsnotify.Watcher, skip func(string) bool) {
 			}
 			if event.Op.Has(fsnotify.Create) {
 				info, statErr := os.Stat(event.Name)
-				if statErr == nil && info.IsDir() && (skip != nil || !skip(event.Name)) {
+				if statErr == nil && info.IsDir() && (skip == nil || !skip(event.Name)) {
 					fsnw.Add(event.Name)
 				}
 			}
