@@ -151,9 +151,9 @@ func useSSE(srv *http.ServeMux, buildCh <-chan []error) {
 		for errs := range buildCh {
 			switch nerrs := len(errs); nerrs {
 			case 0:
-				hub.Broadcast("event: build\ndata: success")
+				hub.Broadcast("event: build\ndata: success", 5*time.Second)
 			default:
-				hub.Broadcast(fmt.Sprint("event: build-errors\ndata: ", nerrs))
+				hub.Broadcast(fmt.Sprint("event: build-errors\ndata: ", nerrs), 5*time.Second)
 			}
 		}
 	}()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -11,14 +12,26 @@ type SSEHandler struct {
 	connections Smap[*chan string, struct{}]
 }
 
-func (h *SSEHandler) Broadcast(value string) {
-	var conns []chan string
+func (h *SSEHandler) Broadcast(value string, dropAfter time.Duration) {
+	var wg sync.WaitGroup
 
 	h.connections.Range(func(ch *chan string, _ struct{}) bool {
-		conns = append(conns, *ch)
-		go func() { *ch <- value }()
+		if ch == nil {
+			return true
+		}
+		wg.Go(func() {
+			if _, ok := h.connections.Load(ch); !ok {
+				return
+			}
+			select {
+			case *ch <- value:
+			case <-time.After(dropAfter):
+				h.close(ch)
+			}
+		})
 		return true
 	})
+	wg.Wait()
 }
 
 func (h *SSEHandler) connect() *chan string {
@@ -28,8 +41,10 @@ func (h *SSEHandler) connect() *chan string {
 }
 
 func (h *SSEHandler) close(ch *chan string) {
-	close(*ch)
-	h.connections.Delete(ch)
+	if ch != nil {
+		h.connections.Delete(ch)
+		close(*ch)
+	}
 }
 
 type SSEHandlerOpt struct {
@@ -86,7 +101,10 @@ func (h *SSEHandler) Handler(opt *SSEHandlerOpt) http.HandlerFunc {
 			select {
 			case <-connection.Done():
 				return
-			case val := <-*values:
+			case val, ok := <-*values:
+				if !ok {
+					return
+				}
 				if val != "" {
 					opt.send(flusher, w, val)
 				}
