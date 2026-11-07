@@ -89,8 +89,8 @@ Commands:
    --`, cyan.Paint("mini"), ` minify each site page styles and scripts into single import`), `
 
 `, magenta.Paint(" init "), `Generate a default project `, gray.Embed(`
-   [`, cyan.Paint("mount"), `] directory to put the project into`), `
-   -`, cyan.Paint("f"), ` | --`, cyan.Paint("force"), ` override files if they exists
+   [`, cyan.Paint("mount"), `] directory to put the project into
+   -`, cyan.Paint("f"), ` | --`, cyan.Paint("force"), ` override files if they exists`), `
 
 `, magenta.Paint(" serve "), `Build and serve your project statically via http`, gray.Embed(`
    -`, cyan.Paint("l"), ` | --`, cyan.Paint("live"), ` enable automatic rebuilding or at specified time interval
