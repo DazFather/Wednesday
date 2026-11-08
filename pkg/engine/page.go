@@ -227,8 +227,16 @@ func (p *page) importTemplate() (*template.Template, error) {
 				}
 				return
 			},
-			"page": func(val string) error {
-				p.Location = filepath.Clean(val)
+			"location": func(val string) error {
+				loc := filepath.Clean(val)
+				if filepath.IsAbs(loc) {
+					return fmt.Errorf("location must be a relative path: %q", val)
+				}
+				target := filepath.Join(p.OutputDir, loc)
+				if !util.IsOnDir(target, p.OutputDir) {
+					return fmt.Errorf("location escapes output directory: %q", val)
+				}
+				p.Location = loc
 				return nil
 			},
 		})

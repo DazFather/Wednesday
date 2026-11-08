@@ -184,9 +184,10 @@ As with components, template pages can be placed anywhere within the input direc
 However, they support additional syntax to manage resource imports more explicitly:
 
 .TP
-.B {!{ page \(dqpath/file.html\(dq }!}
+.B {!{ location \(dqpath/file.html\(dq }!}
 Writes the generated page to the given path relative to the output directory.
-Asset links are relative to the page location.
+The path must stay within the output directory. Asset links are relative to the
+page location.
 
 .TP
 .B {!{ import \(dqdynamics\(dq }!}
