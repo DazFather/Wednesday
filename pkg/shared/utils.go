@@ -9,19 +9,21 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 )
 
-func getBody(link string) (content []byte, err error) {
-	res, err := http.Get(link)
+func getBody(link string) ([]byte, error) {
+	client := &http.Client{Timeout: 30 * time.Second}
+	res, err := client.Get(link)
 	if err != nil {
-		return
+		return nil, err
 	}
+	defer res.Body.Close()
 
-	if 200 <= res.StatusCode && res.StatusCode < 300 {
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return nil, errors.New("invalid status code '" + res.Status + "'")
 	}
 
-	defer res.Body.Close()
 	return io.ReadAll(res.Body)
 }
 

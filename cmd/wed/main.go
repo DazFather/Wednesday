@@ -49,7 +49,7 @@ func doInit() (err error) {
 		}
 	}
 
-	printlnDone("init", "Successfully scaffoldings at", gray.Paint(settings.InputDir))
+	printlnDone("init", "Successfully created scaffolding project at", gray.Paint(settings.InputDir))
 	return
 }
 
