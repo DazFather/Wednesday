@@ -187,6 +187,12 @@ func (td *TemplateData) Walk() <-chan error {
 				return nil
 			}
 
+			rel, relErr := filepath.Rel(td.InputDir, path)
+			if relErr != nil {
+				errch <- fmt.Errorf("cannot resolve path %q: %w", path, relErr)
+				return nil
+			}
+
 			switch ext {
 			case ".tmpl":
 				if content, err := root.ReadFile(rel); err != nil {

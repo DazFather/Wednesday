@@ -2,11 +2,13 @@ package engine
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html/template"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	util "github.com/DazFather/Wednesday/pkg/shared"
 )
@@ -74,20 +76,20 @@ func (p *page) Build(data any) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-func (p *page) genImportDynamic(dynamics []string) func() (template.HTML, error) {
+func (p *page) genImportDynamic(dynamics []string) (func() template.HTML, error) {
 	if len(dynamics) == 0 {
-		return func() template.HTML { return "" }
+		return func() template.HTML { return "" }, nil
 	}
 
-	return func() (template.HTML, error) {
+	return func() template.HTML {
 		s := new(strings.Builder)
 		for _, name := range util.Compact(dynamics) {
 			if err := p.ExecuteTemplate(s, "wed-dynamic-"+name, p); err != nil {
-				return "", err
+				s.WriteString("<!-- template error: " + template.HTMLEscapeString(err.Error()) + " -->")
 			}
 		}
-		return template.HTML(s.String()), nil // #nosec G203 -- renders trusted, build-generated template output
-	}
+		return template.HTML(s.String()) // #nosec G203 -- renders trusted, build-generated template output
+	}, nil
 }
 
 func (p *page) genImportStyle(styles []string) (func() template.HTML, error) {
@@ -169,9 +171,9 @@ func (p *page) genImportScript(components []*Component) (func() template.HTML, e
 
 func (p *page) importTemplate() (*template.Template, error) {
 	var (
-		scripts                   []*Component
-		styles, dynamics          []string
-		importStyle, importScript func() template.HTML
+		scripts                                []*Component
+		styles, dynamics                       []string
+		importStyle, importScript, importDynamic func() template.HTML
 	)
 
 	// Dependency check and collect imports
@@ -208,7 +210,7 @@ func (p *page) importTemplate() (*template.Template, error) {
 	})
 
 	wg.Wait()
-	if err := errors.Join(errs...); err != nil {
+	if err := errors.Join(errs[:]...); err != nil {
 		return nil, err
 	}
 
