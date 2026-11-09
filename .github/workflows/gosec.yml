@@ -1,0 +1,25 @@
+name: Gosec
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gosec:
+    name: gosec
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.26.10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install gosec
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          "$(go env GOPATH)/bin/gosec" -quiet ./...
