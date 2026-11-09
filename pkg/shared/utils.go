@@ -39,7 +39,7 @@ func FetchContent(link string) (content []byte, err error) {
 	if url, e := CleanURL(link); e == nil {
 		return getBody(url)
 	}
-	return os.ReadFile(link)
+	return os.ReadFile(link) // #nosec G304 -- reads an explicit local path/URL target provided by trusted templates/build inputs
 }
 
 func Compact[T comparable](list []T) []T {

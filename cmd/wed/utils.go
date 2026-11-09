@@ -338,6 +338,10 @@ func serveDir(port, outputdir string) (srv *http.Server, han *http.ServeMux) {
 		}
 	}
 	han.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("./"+outputdir))))
-	srv = &http.Server{Addr: settings.port, Handler: han}
+	srv = &http.Server{
+		Addr:              settings.port,
+		Handler:           han,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 	return
 }

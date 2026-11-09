@@ -42,7 +42,7 @@ func NewSettingsFromJSON(spath string) (s FileSettings, err error) {
 		Module:    "text/javascript",
 	}}
 
-	b, err := os.ReadFile(spath)
+	b, err := os.ReadFile(spath) // #nosec G304 -- reads settings file from an explicit user-provided path
 	if err != nil {
 		return
 	}
@@ -195,7 +195,7 @@ func helpFlags() {
 
 	f.BoolVar(&brush.Disable, "no-color", false, "force disable of colored output'")
 	f.BoolVar(&brush.Disable, "nc", false, "shorthand for 'no-color'")
-	f.Usage = func() { doHelp(); os.Exit(1) }
+	f.Usage = func() { _ = doHelp(); os.Exit(1) }
 
 	if err := f.Parse(os.Args[2:]); err != nil {
 		f.Usage()

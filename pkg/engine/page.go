@@ -36,7 +36,7 @@ func (td *TemplateData) newPage(name string) *page {
 		"embed": func(link string) (emb template.HTML, err error) {
 			content, err := util.FetchContent(link)
 			if err == nil {
-				emb = template.HTML(content)
+				emb = template.HTML(content) // #nosec G203 -- embed intentionally returns build-time content as trusted HTML
 			}
 			return
 		},
@@ -104,7 +104,7 @@ func (p *page) genImportStyle(styles []string) (func() template.HTML, error) {
 		tags += p.StyleTag(name)
 	}
 
-	return func() template.HTML { return template.HTML(tags) }, nil
+	return func() template.HTML { return template.HTML(tags) }, nil // #nosec G203 -- generated, trusted style import tags
 }
 
 func (p *page) genImportScript(components []*Component) (func() template.HTML, error) {
@@ -166,13 +166,13 @@ func (p *page) genImportScript(components []*Component) (func() template.HTML, e
 		}
 	}
 
-	return func() template.HTML { return template.HTML(tags.String()) }, nil
+	return func() template.HTML { return template.HTML(tags.String()) }, nil // #nosec G203 -- generated, trusted script import tags
 }
 
 func (p *page) importTemplate() (*template.Template, error) {
 	var (
-		scripts                                []*Component
-		styles, dynamics                       []string
+		scripts                                  []*Component
+		styles, dynamics                         []string
 		importStyle, importScript, importDynamic func() template.HTML
 	)
 
@@ -340,7 +340,7 @@ func (p *page) use(name string, opt ...ComponentInfo) (template.HTML, error) {
 	if err := p.ExecuteTemplate(&str, "wed-static-"+name, data); err != nil {
 		return "", err
 	}
-	return template.HTML(str.String()), nil
+	return template.HTML(str.String()), nil // #nosec G203 -- renders trusted component templates
 }
 
 func (p page) toDepencency(comp Component) (dep ComponentDependency, err error) {

@@ -137,7 +137,7 @@ func doRun() error {
 
 	sh, flag := defaultShell()
 	for _, c := range commands {
-		cmd := exec.Command(sh, flag, c)
+		cmd := exec.Command(sh, flag, c) // #nosec G204 -- executes user-configured commands from wed-settings.json by design
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr

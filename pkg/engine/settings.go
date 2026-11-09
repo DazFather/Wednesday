@@ -70,7 +70,7 @@ func (s Settings) StyleURL(elem ...string) string {
 	if size := len(elem); size != 0 && filepath.Ext(elem[size-1]) == "" {
 		elem[size-1] += ".css"
 	}
-	link, err := url.JoinPath("style", elem...)
+	link, err := url.JoinPath("style", elem...) // #nosec G125 -- build-internal asset path segments
 	if err != nil {
 		panic(err)
 	}
@@ -81,7 +81,7 @@ func (s Settings) ScriptURL(elem ...string) string {
 	if size := len(elem); size != 0 && filepath.Ext(elem[size-1]) == "" {
 		elem[size-1] += ".js"
 	}
-	link, err := url.JoinPath("script", elem...)
+	link, err := url.JoinPath("script", elem...) // #nosec G125 -- build-internal asset path segments
 	if err != nil {
 		panic(err)
 	}

@@ -138,7 +138,7 @@ func LoadCollection() (manifests Collection, err error) {
 		}
 
 		lib := entry.Name()
-		content, err = os.ReadFile(filepath.Join(configDir, lib))
+		content, err = os.ReadFile(filepath.Join(configDir, lib)) // #nosec G304 -- reads trusted component manifests from the user config directory
 		if err != nil {
 			return
 		}

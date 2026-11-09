@@ -31,7 +31,7 @@ func (s Settings) bundleJS(opt *es.BuildOptions, mod ModuleType, page string, en
 		}
 	} else {
 		for i, e := range entries {
-			content, err := os.ReadFile(e)
+			content, err := os.ReadFile(e) // #nosec G304 -- reads build-generated script entry files under the project/build directories
 			if err != nil {
 				return fmt.Errorf("read JS entry %q for page %q: %w", e, page, err)
 			}
