@@ -213,8 +213,8 @@ func parseDefault(f *flag.FlagSet, args []string, usage func()) {
 	f.BoolVar(&brush.Disable, "nc", false, "shorthand for 'no-color'")
 	f.Usage = func() {
 		for _, arg := range f.Args() {
-			switch strings.TrimPrefix(strings.TrimPrefix(arg, "-"), "-") {
-			case "nc", "no-color":
+			arg = strings.TrimPrefix(strings.TrimPrefix(arg, "-"), "-")
+			if arg == "nc" || arg == "no-color" {
 				brush.Disable = true
 				break
 			}
