@@ -6,7 +6,11 @@ type Smap[K comparable, V any] sync.Map
 
 func (s *Smap[K, V]) Load(key K) (V, bool) {
 	v, ok := (*sync.Map)(s).Load(key)
-	return v.(V), ok
+	if !ok {
+		var zero V
+		return zero, false
+	}
+	return v.(V), true
 }
 
 func (s *Smap[K, V]) Store(key K, val V) {

@@ -59,7 +59,7 @@ func (opt SSEHandlerOpt) send(f *http.ResponseController, w http.ResponseWriter,
 		err = f.Flush()
 	}
 	if err != nil && opt.HandleErr != nil {
-		opt.HandleErr(fmt.Errorf("Unable to send data over SSE: %w", err))
+		opt.HandleErr(fmt.Errorf("unable to send data over SSE: %w", err))
 	}
 }
 

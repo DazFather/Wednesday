@@ -38,7 +38,7 @@ func (m ManifestItem) Download(outputDir, lib, name string) error {
 		}
 	}
 
-	return os.WriteFile(filepath.Join(outputDir, lib, lib+"-"+name+".wed.html"), content, 0666)
+	return os.WriteFile(filepath.Join(outputDir, lib, lib+"-"+name+".wed.html"), content, 0600)
 }
 
 type Collection map[string]map[string]ManifestItem
@@ -195,7 +195,7 @@ func doLibTrust() (err error) {
 	}
 
 	if settings.download {
-		if err = os.MkdirAll(filepath.Join(trusted, settings.name), os.ModePerm); err != nil {
+		if err = os.MkdirAll(filepath.Join(trusted, settings.name), 0750); err != nil {
 			return
 		}
 
@@ -208,9 +208,9 @@ func doLibTrust() (err error) {
 	}
 
 	manifestPath := filepath.Join(trusted, settings.name+".json")
-	if err = os.WriteFile(manifestPath, content, 0666); err != nil && os.IsNotExist(err) {
-		if err = os.MkdirAll(trusted, os.ModePerm); err == nil {
-			err = os.WriteFile(manifestPath, content, 0666)
+	if err = os.WriteFile(manifestPath, content, 0600); err != nil && os.IsNotExist(err) {
+		if err = os.MkdirAll(trusted, 0750); err == nil {
+			err = os.WriteFile(manifestPath, content, 0600)
 		}
 	}
 
@@ -238,7 +238,13 @@ func doLibUse() error {
 			return err
 		}
 
-		content, err := os.ReadFile(filename)
+		dir, err := os.OpenRoot(filepath.Dir(filename))
+		if err != nil {
+			return err
+		}
+		defer dir.Close()
+
+		content, err := dir.ReadFile(filepath.Base(filename))
 		if err != nil {
 			return err
 		}

@@ -37,18 +37,18 @@ func autoheal(path string) error {
 	path = filepath.Clean(path)
 
 	for _, subdir := range []string{"style", "script"} {
-		if err := os.MkdirAll(filepath.Join(settings.OutputDir, subdir), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Join(settings.OutputDir, subdir), 0750); err != nil {
 			return err
 		}
 	}
 
 	assets := defAssets()
 	if content, found := assets[path]; found {
-		return os.WriteFile(path, content, 0644)
+		return os.WriteFile(path, content, 0600)
 	}
 
 	for name, content := range assets {
-		if err := os.WriteFile(name, content, 0644); err != nil {
+		if err := os.WriteFile(name, content, 0600); err != nil {
 			return err
 		}
 	}

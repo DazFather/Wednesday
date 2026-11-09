@@ -68,17 +68,17 @@ func WatchDir(dir string, skip func(string) bool) (*DirWatcher, error) {
 		return nil, err
 	}
 
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, e error) error {
+	err = filepath.WalkDir(dir, func(path string, info os.DirEntry, e error) error {
 		if e == nil && info.IsDir() {
 			if skip != nil && skip(path) {
 				return filepath.SkipDir
 			}
-			fsnw.Add(path)
+			e = fsnw.Add(path)
 		}
 		return e
 	})
 	if err != nil {
-		fsnw.Close()
+		_ = fsnw.Close()
 		return nil, err
 	}
 
@@ -102,6 +102,14 @@ func WatchDir(dir string, skip func(string) bool) (*DirWatcher, error) {
 func (fw *DirWatcher) scan(fsnw *fsnotify.Watcher, skip func(string) bool) {
 	defer fsnw.Close()
 
+	handleErr := func(err error) {
+		if err == nil {
+			return
+		}
+		fw.err = errors.Join(fw.err, err)
+		fw.errch <- err
+	}
+
 	for {
 		select {
 		case event, ok := <-fsnw.Events:
@@ -111,7 +119,7 @@ func (fw *DirWatcher) scan(fsnw *fsnotify.Watcher, skip func(string) bool) {
 			if event.Op.Has(fsnotify.Create) {
 				info, statErr := os.Stat(event.Name)
 				if statErr == nil && info.IsDir() && (skip == nil || !skip(event.Name)) {
-					fsnw.Add(event.Name)
+					handleErr(fsnw.Add(event.Name))
 				}
 			}
 			if fw.emit(event) {
@@ -121,10 +129,7 @@ func (fw *DirWatcher) scan(fsnw *fsnotify.Watcher, skip func(string) bool) {
 			if !ok {
 				continue
 			}
-			if event != nil {
-				fw.err = errors.Join(fw.err, event)
-				fw.errch <- event
-			}
+			handleErr(event)
 		case <-fw.stopper:
 			return
 		}

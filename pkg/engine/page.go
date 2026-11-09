@@ -55,7 +55,9 @@ func (p *page) Build(data any) ([]byte, error) {
 
 	// Run first template engine
 	for _, c := range (*p.collected).Templates() {
-		p.AddParseTree(c.Name(), c.Tree)
+		if _, err := p.AddParseTree(c.Name(), c.Tree); err != nil {
+			return nil, err
+		}
 	}
 	if err := p.Template.Execute(&buf, data); err != nil {
 		return nil, err
@@ -72,17 +74,19 @@ func (p *page) Build(data any) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-func (p *page) genImportDynamic(dynamics []string) func() template.HTML {
+func (p *page) genImportDynamic(dynamics []string) func() (template.HTML, error) {
 	if len(dynamics) == 0 {
 		return func() template.HTML { return "" }
 	}
 
-	return func() template.HTML {
+	return func() (template.HTML, error) {
 		s := new(strings.Builder)
 		for _, name := range util.Compact(dynamics) {
-			p.ExecuteTemplate(s, "wed-dynamic-"+name, p)
+			if err := p.ExecuteTemplate(s, "wed-dynamic-"+name, p); err != nil {
+				return "", err
+			}
 		}
-		return template.HTML(s.String())
+		return template.HTML(s.String()), nil // #nosec G203 -- renders trusted, build-generated template output
 	}
 }
 
@@ -188,28 +192,25 @@ func (p *page) importTemplate() (*template.Template, error) {
 		}
 	}
 
-	var errch = make(chan error, 2)
+	var (
+		errs [3]error
+		wg   sync.WaitGroup
+	)
 
-	go func() {
-		var err error
-		importStyle, err = p.genImportStyle(styles)
-		errch <- err
-	}()
+	wg.Go(func() {
+		importStyle, errs[0] = p.genImportStyle(styles)
+	})
+	wg.Go(func() {
+		importScript, errs[1] = p.genImportScript(scripts)
+	})
+	wg.Go(func() {
+		importDynamic, errs[2] = p.genImportDynamic(dynamics)
+	})
 
-	go func() {
-		var err error
-		importScript, err = p.genImportScript(scripts)
-		errch <- err
-	}()
-
-	importDynamic := p.genImportDynamic(dynamics)
-	if err := <-errch; err != nil {
+	wg.Wait()
+	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
-	if err := <-errch; err != nil {
-		return nil, err
-	}
-	close(errch)
 
 	templ := template.New(p.Name()).
 		Delims("{!{", "}!}").
@@ -252,7 +253,7 @@ func (p *page) getVar(name string, def ...any) (any, error) {
 
 	switch len(def) {
 	case 0:
-		return nil, fmt.Errorf("Value %q requested but not provided", name)
+		return nil, fmt.Errorf("value %q requested but not provided", name)
 	case 1:
 		return def[0], nil
 	}
@@ -408,7 +409,7 @@ func (p *page) hold(templs ...any) (res ComponentInfo, err error) {
 			}
 			last = v
 		default:
-			err = fmt.Errorf("Invalid given args type %T expected 'string' or 'ComponentInfo'", v)
+			err = fmt.Errorf("invalid given args type %T expected 'string' or 'ComponentInfo'", v)
 			return
 		}
 	}

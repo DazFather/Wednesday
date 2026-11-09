@@ -116,13 +116,13 @@ func (td *TemplateData) buildPages(errch chan<- error) {
 			}
 
 			if dir := filepath.Dir(page.Location); dir != "" {
-				if err = os.MkdirAll(filepath.Join(td.OutputDir, dir), 0755); err != nil {
+				if err = os.MkdirAll(filepath.Join(td.OutputDir, dir), 0750); err != nil {
 					errch <- err
 					return
 				}
 			}
 
-			if err = os.WriteFile(filepath.Join(td.OutputDir, page.Location), content, 0644); err != nil {
+			if err = os.WriteFile(filepath.Join(td.OutputDir, page.Location), content, 0600); err != nil {
 				errch <- err
 				return
 			}
@@ -158,7 +158,14 @@ func (td *TemplateData) Walk() <-chan error {
 
 	go func() {
 		defer close(errch)
-		err := filepath.WalkDir(td.InputDir, func(path string, info fs.DirEntry, e error) error {
+		root, err := os.OpenRoot(td.InputDir)
+		if err != nil {
+			errch <- err
+			return
+		}
+		defer root.Close()
+
+		err = filepath.WalkDir(td.InputDir, func(path string, info fs.DirEntry, e error) error {
 			if e != nil {
 				return e
 			}
@@ -182,7 +189,7 @@ func (td *TemplateData) Walk() <-chan error {
 
 			switch ext {
 			case ".tmpl":
-				if content, err := os.ReadFile(path); err != nil {
+				if content, err := root.ReadFile(rel); err != nil {
 					errch <- fmt.Errorf("cannot read page template %q: %w", path, err)
 				} else {
 					for _, p := range td.pages {
@@ -196,7 +203,7 @@ func (td *TemplateData) Walk() <-chan error {
 					}
 				}
 			case ".wed.html":
-				if content, err := os.ReadFile(path); err != nil {
+				if content, err := root.ReadFile(rel); err != nil {
 					errch <- fmt.Errorf("cannot read component %q: %w", path, err)
 				} else if c, err := NewComponent(name, content); err != nil {
 					errch <- fmt.Errorf("cannot parse component %q: %w", path, err)

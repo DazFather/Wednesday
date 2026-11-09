@@ -40,11 +40,11 @@ func doInit() (err error) {
 			continue
 		}
 		if dir := filepath.Dir(name); dir != "." {
-			if err = os.MkdirAll(dir, 0755); err != nil {
+			if err = os.MkdirAll(dir, 0750); err != nil {
 				return
 			}
 		}
-		if err = os.WriteFile(name, content, 0644); err != nil {
+		if err = os.WriteFile(name, content, 0600); err != nil {
 			return
 		}
 	}
@@ -57,13 +57,13 @@ func doBuild() (err error) {
 	var errs []error
 	for name, content := range defAssets() {
 		if dir := filepath.Dir(name); dir != "." {
-			if e := os.MkdirAll(dir, 0755); e != nil {
+			if e := os.MkdirAll(dir, 0750); e != nil {
 				errs = append(errs, e)
 			}
 		}
 		if _, e := os.Stat(name); e != nil && os.IsNotExist(e) {
-			hint(gray.Paint("Detected missing assets '", name, "' recrating it\n"))
-			if e = os.WriteFile(name, content, 0644); e != nil {
+			hint(gray.Paint("Detected missing assets '", name, "' recreating it\n"))
+			if e = os.WriteFile(name, content, 0600); e != nil {
 				errs = append(errs, e)
 			}
 		}
@@ -73,7 +73,7 @@ func doBuild() (err error) {
 			fmt.Println(red.Paint(i), err)
 			printlnStackTrace(err)
 		}
-		return fmt.Errorf("Failed to recreate missing assets, errors: %d", n)
+		return fmt.Errorf("failed to recreate missing assets, errors: %d", n)
 	}
 
 	i := 0
@@ -83,7 +83,7 @@ func doBuild() (err error) {
 		printlnStackTrace(err)
 	}
 	if i > 0 {
-		return fmt.Errorf("Failed to build site, errors: %d", i)
+		return fmt.Errorf("failed to build site, errors: %d", i)
 	}
 
 	printlnDone("build", "Site successfully built at", gray.Paint(settings.OutputDir))
@@ -197,7 +197,7 @@ func doHelp() error {
 		case "use":
 			libUseUsage()
 		default:
-			return fmt.Errorf("unknown given subcommand: %q\n Use 'help %s' for usage\n", settings.arg, settings.name)
+			return fmt.Errorf("unknown given subcommand: %q (use 'help %s' for usage)", settings.arg, settings.name)
 		}
 	case "build":
 		buildUsage()
@@ -208,7 +208,7 @@ func doHelp() error {
 	case "run":
 		runUsage()
 	default:
-		return fmt.Errorf("unknown given command: %q\n Use 'help' for usage\n", settings.name)
+		return fmt.Errorf("unknown given command: %q (use 'help' for usage)", settings.name)
 	}
 
 	return nil
@@ -227,7 +227,7 @@ func main() {
 	}()
 
 	if len(os.Args) < 2 {
-		err = fmt.Errorf("Missing command\nUse 'help' for usage")
+		err = fmt.Errorf("missing command (use 'help' for usage)")
 		return
 	}
 
@@ -252,6 +252,6 @@ func main() {
 	case "version", "v", "-v", "--v", "-version", "--version":
 		fmt.Println(Version)
 	default:
-		err = fmt.Errorf("unknown given command: %q\n Use 'help' for usage\n", command)
+		err = fmt.Errorf("unknown given command: %q (use 'help' for usage)", command)
 	}
 }

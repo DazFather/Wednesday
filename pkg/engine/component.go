@@ -98,7 +98,7 @@ func (c *Component) SetHtml(attrs []html.Attribute, content string) (err error) 
 	switch len(attrs) {
 	case 1:
 		if attrs[0].Key != "type" {
-			err = errors.New("Unrecognized html attribute '" + attrs[0].Key + "', the only accepted is 'type'")
+			err = errors.New("unrecognized html attribute '" + attrs[0].Key + "', the only accepted is 'type'")
 		} else {
 			c.Type, err = ParseComponentType(attrs[0].Val)
 		}
@@ -106,7 +106,7 @@ func (c *Component) SetHtml(attrs []html.Attribute, content string) (err error) 
 	case 0:
 		c.HTML = content
 	default:
-		err = errors.New("Too many html attributes, the only accepted is 'type' ")
+		err = errors.New("too many html attributes, the only accepted is 'type'")
 	}
 	return
 }
@@ -162,9 +162,9 @@ func (c Component) WrappedDynamicHTML() string {
 }
 
 func (c Component) WriteStyle(fpath string) error {
-	return os.WriteFile(fpath, []byte(c.WrappedStyle()), os.ModePerm)
+	return os.WriteFile(fpath, []byte(c.WrappedStyle()), 0600)
 }
 
 func (c Component) WriteScript(fpath string) error {
-	return os.WriteFile(fpath, []byte(c.Script), os.ModePerm)
+	return os.WriteFile(fpath, []byte(c.Script), 0600)
 }
