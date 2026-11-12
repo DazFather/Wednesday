@@ -174,6 +174,16 @@ Accesses a variable declared in the project settings:
 {{ var "site-email" }}
 .EE
 
+.TP
+.B embed \(dq<path-or-url>\(dq
+Fetches content from a local path or an \fIhttp(s)\fR URL at build time and
+returns it as trusted HTML for insertion into the template output.
+Use this with trusted sources.
+.EX
+{{ embed "partials/footer.html" }}
+{{ embed "https://example.com/snippet.html" }}
+.EE
+
 
 .SH TEMPLATE PAGES
 Wednesday supports full template pages with the \fI.tmpl\fR extension.

@@ -156,12 +156,21 @@ Wednesday gots you cover, simply add the attribute `type="dynamic"` to the html 
 > This is a precise strategy to improve client speed and reduce state management to only when necessary
   
 In this way the html code will be wrapped again on a [template tag](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) having as the only attribute an _id_ with the component name plus `-component` as the value, such as `<template id="pippo-component">...</template>`.
-Use `{!{ import "dynamics" }!}` to emit the dynamic component templates needed by the page.
+In a template page (`.tmpl`), use `{!{ import "dynamics" }!}` to emit the dynamic component templates needed by the page.
 
 At this point by manipulating the DOM in the standard way is possible to insert the template content anywhere
-> There is also an utility function [useTemplate](#useTemplate) that might cover many cases and help reduce the boilerplate
+> There is also an utility function [useTemplate](#usetemplate) that might cover many cases and help reduce the boilerplate
 
 A dynamic template can include static templates, share datas and snippets with others and do all other action allowed by the template engine
+
+
+#### Embedding content
+Use `{{ embed "<path-or-url>" }}` to fetch content from a local path or an `http(s)` URL at build time and insert it as trusted HTML in the template output.
+```html
+{{ embed "partials/footer.html" }}
+{{ embed "https://example.com/snippet.html" }}
+```
+> Use `embed` with trusted sources only.
 
 
 ### `<script>`
@@ -275,29 +284,45 @@ Retrieves a template by it's id and provides methods to facilitate content inser
 > `todo-item.wed.html`
 
 ```html
+<!-- index.tmpl -->
+<!DOCTYPE html>
 <html>
-    {{ import "dynamics" }}
+  <head>
+    {!{ import "styles" }!}
+    {!{ import "scripts" }!}
+  </head>
+  <body>
+    {!{ import "dynamics" }!}
     <div id="todo-list">
-        <h1>TO DO LIST</h1>
-        <div>
-            <input type="text" placeholder="Write your task here">
-            <input type="button" value=" + " onclick="handleItemAdd()">
-        </div>
+      <h1>TO DO LIST</h1>
+      <div>
+        <input type="text" placeholder="Write your task here">
+        <input type="button" value=" + " onclick="handleItemAdd()">
+      </div>
     </div>
-</html>
-<script require="todo-item">
-    const holder = select("#todo-list")
-    const input = useMirror(holder.querySelector("input[type=text]"), 'value')
+    <script require="todo-item">
+      const holder = select("#todo-list")
+      const input = useMirror(holder.querySelector("input[type=text]"), "value")
 
-    const handleItemAdd = () => {
+      const handleItemAdd = () => {
         const item = newItem()
         item._binds.task = input.value
         holder.appendChild(item)
-        input.value = ''
-    }
-</script>
+        input.value = ""
+      }
+    </script>
+  </body>
+</html>
 ```
-> `app.wed.html`
+> `index.tmpl`
+
+
+### Template pages (`.tmpl`)
+`.tmpl` files are full template pages processed at build time into HTML pages with the same base name (by default at the top level of the output directory). They support the same Go template functions as components, plus page directives:
+- `{!{ location "path/file.html" }!}` — write the generated page to the given path relative to the output directory (the path must stay within the output directory; asset links are adjusted relative to the page location).
+- `{!{ import "dynamics" }!}` — emit dynamic component templates (typically first inside `<body>`).
+- `{!{ import "styles" }!}` — emit component style tags (typically in `<head>`).
+- `{!{ import "scripts" }!}` — emit component script tags (typically in `<head>`).
 
 
 ---
