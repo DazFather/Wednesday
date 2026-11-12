@@ -1,6 +1,6 @@
 module github.com/DazFather/Wednesday
 
-go 1.26.0
+go 1.26.11
 
 require (
 	github.com/DazFather/brush v0.0.0-20250528164247-02213676a6a7
