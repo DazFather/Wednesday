@@ -38,8 +38,8 @@ type Settings struct {
 	OutputDir  string              `json:"output_dir,omitempty"`
 	InputDir   string              `json:"input_dir,omitempty"`
 	Module     ModuleType          `json:"module,omitempty"`
-	Minify     bool                `json:"minify,omitempty"`
 	LiveServer string              `json:"live_server,omitempty"`
+	Minify     bool                `json:"minify,omitempty"`
 }
 
 func (s Settings) StylePath(elem ...string) string {

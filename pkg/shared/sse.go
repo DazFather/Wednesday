@@ -48,9 +48,10 @@ func (h *SSEHandler) close(ch *chan string) {
 }
 
 type SSEHandlerOpt struct {
-	CrossOriginHeader string
 	HandleErr         func(error)
-	Ping, Retry       time.Duration
+	CrossOriginHeader string
+	Ping              time.Duration
+	Retry             time.Duration
 }
 
 func (opt SSEHandlerOpt) send(f *http.ResponseController, w http.ResponseWriter, base string, args ...any) {

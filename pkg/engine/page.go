@@ -20,8 +20,8 @@ type page struct {
 	collected  **template.Template
 	*Settings
 	*template.Template
-	deps     []ComponentDependency
 	Location string
+	deps     []ComponentDependency
 }
 
 func (td *TemplateData) newPage(name string) *page {
@@ -267,9 +267,9 @@ func (p *page) Props(key string, def any) any {
 }
 
 type ComponentInfo struct {
-	hybrid bool
 	holds  map[string]template.HTML
 	props  map[string]any
+	hybrid bool
 }
 
 func (c ComponentInfo) Props(key string, def ...any) (val any, err error) {
