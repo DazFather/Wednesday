@@ -1,5 +1,4 @@
 # Wednesday
-[![Go Report Card](https://goreportcard.com/badge/github.com/DazFather/Wednesday)](https://goreportcard.com/report/github.com/DazFather/Wednesday)
 [![Staticcheck](https://github.com/DazFather/Wednesday/actions/workflows/staticcheck.yml/badge.svg)](https://github.com/DazFather/Wednesday/actions/workflows/staticcheck.yml)
 [![Gosec](https://github.com/DazFather/Wednesday/actions/workflows/gosec.yml/badge.svg)](https://github.com/DazFather/Wednesday/actions/workflows/gosec.yml)
 [![Govulncheck](https://github.com/DazFather/Wednesday/actions/workflows/govulncheck.yml/badge.svg)](https://github.com/DazFather/Wednesday/actions/workflows/govulncheck.yml)
