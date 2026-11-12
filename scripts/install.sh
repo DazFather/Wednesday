@@ -15,7 +15,11 @@ case "$ARCH" in
 esac
 
 # Use GitHub API to find latest release tag
-VERSION=$(curl -sSf "https://api.github.com/repos/$REPO/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")')
+VERSION=$(curl -sSfL "https://api.github.com/repos/$REPO/releases/latest" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
+if [ -z "$VERSION" ]; then
+  echo "Unable to determine latest release version" >&2
+  exit 1
+fi
 
 # Build target ZIP name
 FILENAME="wed-${OS}-${ARCH}.tar.gz"
@@ -32,9 +36,8 @@ curl -sSL "$URL" -o "$TMP_DIR/$FILENAME"
 
 # Extract and run included install script
 tar -xzf "$TMP_DIR/$FILENAME" -C "$TMP_DIR"
-pushd .
 cd "$TMP_DIR"
-if [ -x $INSTALL_SCRIPT ]; then
+if [ -f ./install.sh ]; then
   echo "Running installer..."
   chmod +x ./install.sh
   ./install.sh
@@ -42,6 +45,5 @@ else
   echo "Install script not found in archive!" >&2
   exit 1
 fi
-popd
 echo "✓ Installed successfully"
 

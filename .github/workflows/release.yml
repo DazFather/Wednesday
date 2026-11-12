@@ -19,14 +19,14 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod'
+          go-version-file: go.mod
           cache: true
 
       - name: Build wed binaries
@@ -49,14 +49,17 @@ jobs:
         run: |
           MANUALS_DIR="${BUILD_DIR}/manuals"
           mkdir -p "${MANUALS_DIR}"
+          shopt -s nullglob
           for f in man/*.[0-9]; do
-            gzip -9 -c "$f" > ${MANUALS_DIR}/$(basename "$f").gz
+            gzip -9 -c "$f" > "${MANUALS_DIR}/$(basename "$f").gz"
           done
 
       - name: Bundle releases
         run: |
           INSTALL_SCRIPT="scripts/${{ matrix.goos }}-artifact-install"
           if [ "${{ matrix.goos }}" = "windows" ]; then
+            sudo apt-get update
+            sudo apt-get install -y zip
             cp "$INSTALL_SCRIPT.bat" "$BUILD_DIR/install.bat"
             zip -j "$BUILD_DIR.zip" "$BUILD_DIR"/*
           else
@@ -66,13 +69,14 @@ jobs:
           fi
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wed-${{ matrix.goos }}-${{ matrix.goarch }}
           path: |
             dist/wed-${{ matrix.goos }}-${{ matrix.goarch }}.zip
             dist/wed-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
             dist/wed-${{ matrix.goos }}-${{ matrix.goarch }}/manuals/*.gz
+          if-no-files-found: warn
           retention-days: 1
 
   checksum_sign:
@@ -84,9 +88,10 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: dist
+          merge-multiple: true
 
       - name: Generate SHA256SUMS and sign
         env:
@@ -103,10 +108,9 @@ jobs:
               --detach-sign SHA256SUMS
 
       - name: Upload release assets
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           files: |
             dist/**/*.zip
             dist/**/*.tar.gz
