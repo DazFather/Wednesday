@@ -10,7 +10,7 @@ This GitHub Action downloads the `wed` binary (for Linux, macOS, or Windows), se
 uses: DazFather/Wednesday/wed-build@v1.0.0-alpha.8
 with:
   flags: --settings my/path/to/settings.json   # Optional. Flags to pass to `wed build`
-````
+```
 
 ### Example in a full Pages deployment:
 
