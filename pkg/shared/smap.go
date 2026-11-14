@@ -5,12 +5,13 @@ import "sync"
 type Smap[K comparable, V any] sync.Map
 
 func (s *Smap[K, V]) Load(key K) (V, bool) {
-	v, ok := (*sync.Map)(s).Load(key)
-	if !ok {
-		var zero V
-		return zero, false
+	var val V
+	v, found := (*sync.Map)(s).Load(key)
+	if !found {
+		return val, false
 	}
-	return v.(V), true
+	val, _ = v.(V)
+	return val, true
 }
 
 func (s *Smap[K, V]) Store(key K, val V) {
