@@ -29,6 +29,7 @@ func NewTemplateData(s Settings) *TemplateData {
 		collected: template.New("temp").Funcs(template.FuncMap{
 			"list":  mock,
 			"embed": mock,
+			"read":  mock,
 			"use":   mock,
 			"args":  mock,
 			"hold":  mock,

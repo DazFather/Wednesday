@@ -2,6 +2,7 @@ package engine
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -9,6 +10,9 @@ import (
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/pelletier/go-toml/v2"
+	"gopkg.in/yaml.v3"
 
 	util "github.com/DazFather/Wednesday/pkg/shared"
 )
@@ -31,6 +35,29 @@ func (td *TemplateData) newPage(name string) *page {
 		collected:  &td.collected,
 		Location:   filepath.Clean(name + ".html"),
 	}
+	readData := func(format, source string) (any, error) {
+		content, err := util.FetchContent(source)
+		if err != nil {
+			return nil, err
+		}
+		var (
+			val       any
+			unmarshal func([]byte, any) error
+		)
+		switch strings.ToLower(strings.TrimSpace(format)) {
+		case "json":
+			unmarshal = json.Unmarshal
+		case "yaml":
+			unmarshal = yaml.Unmarshal
+		case "toml":
+			unmarshal = toml.Unmarshal
+		default:
+			return nil, fmt.Errorf("read: unsupported format %q (expected json, yaml, or toml)", format)
+		}
+		err = unmarshal(content, &val)
+		return val, err
+	}
+
 	p.Template = template.New(name).Funcs(template.FuncMap{
 		"list": func(v ...any) []any { return v },
 		"embed": func(link string) (emb template.HTML, err error) {
@@ -40,6 +67,7 @@ func (td *TemplateData) newPage(name string) *page {
 			}
 			return
 		},
+		"read": readData,
 		"use":  p.use,
 		"args": p.args,
 		"hold": p.hold,
