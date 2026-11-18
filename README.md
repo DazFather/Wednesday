@@ -37,7 +37,7 @@ Then simply run the related installation script depending on your os
  > If you have troubles running the script try to `chmod +x ./scripts/<OS>-compile-install.sh` before running it
 
  - **Linux** `./scripts/linux-compile-install.sh`
- - **Windows** `.\scripts\windows-compile-install.bat`
+ - **Windows** `.\scripts\windows-install.bat`
  - **MacOS** `./scripts/darwin-compile-install.sh`
 
 By running the script the go binary will be shrinked and have a more coherent `wed --version`.

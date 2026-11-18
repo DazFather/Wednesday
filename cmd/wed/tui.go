@@ -98,7 +98,7 @@ Commands:
 
 `, magenta.Paint(" run <command> "), `Execute a user-defined pipeline of commands
 
-`, magenta.Paint(" lib <command> "), `Manage and interact with external libraries`, gray.Embed(`
+`, magenta.Paint(" lib <command> "), `EXPERIMENTAL: manage and interact with external libraries`, gray.Embed(`
    `, cyan.Paint("search"), ` [pattern] Search for components within trusted libraries
    `, cyan.Paint("trust"), ` <url> Trust a library and download it's manifest
    `, cyan.Paint("untrust"), ` <library> Remove the manifest of the specified library
@@ -116,6 +116,9 @@ Commands:
 func libUsage() {
 	fmt.Println(`
         Usage`, magenta.Paint(" lib "), `command
+
+EXPERIMENTAL: this command is experimental and unsupported. It may change or
+be removed in any release. Use it at your own risk.
 
 Sub-commands:
 
@@ -254,6 +257,8 @@ func libUseUsage() {
 	fmt.Println(`
         Usage`, magenta.Paint(" lib use "), `command
 
+EXPERIMENTAL command.
+
 Use a component in the current project.
 The component must be from an already trusted library.
 It's possible to specify the name by only using the name, or to avoid homonymous
@@ -274,6 +279,8 @@ library name of the requested one followed by '-'
 func libTrustUsage() {
 	fmt.Println(`
         Usage`, magenta.Paint(" lib trust "), `command
+
+EXPERIMENTAL command.
 
 Trust a library and download it's manifest by following the provided link.
 If starts with 'http' then an HTTP GET request will be made to retrieve the file.
@@ -298,6 +305,8 @@ func libSearchUsage() {
 	fmt.Println(`
         Usage`, magenta.Paint(" lib search "), `command'
 
+EXPERIMENTAL command.
+
 Obtain a detailed view of matching components within trusted libraries.
 By default the provided pattern will be used for matching components name or tags
 
@@ -313,6 +322,8 @@ Command flags:`, gray.Embed(`
 func libUntrustUsage() {
 	fmt.Println(`
         Usage`, magenta.Paint(" lib untrust "), `command
+
+EXPERIMENTAL command.
 
 Trusting a library is essentially coping a manifest into wednesday config.
 By untrusting it you remove that file therefore components provided will not be shown
