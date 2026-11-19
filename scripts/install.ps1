@@ -32,6 +32,30 @@ try {
 }
 Write-Success "Download completed: $zipPath"
 
+Write-Info "Verifying checksum..."
+$sumsUrl = "https://github.com/$repo/releases/download/$version/SHA256SUMS"
+$sumsPath = Join-Path $tmpDir "SHA256SUMS"
+try {
+    Invoke-WebRequest -Uri $sumsUrl -OutFile $sumsPath
+} catch {
+    Write-ErrorMsg "Checksum download failed: $_"
+    exit 1
+}
+$expected = Get-Content -LiteralPath $sumsPath |
+    Where-Object { $_ -match "\s+\./$([regex]::Escape($filename))$" } |
+    ForEach-Object { ($_ -split '\s+')[0] } |
+    Select-Object -First 1
+if (-not $expected) {
+    Write-ErrorMsg "Checksum for $filename not found."
+    exit 1
+}
+$actual = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash
+if ($actual.ToLower() -ne $expected.ToLower()) {
+    Write-ErrorMsg "Checksum verification failed for $filename."
+    exit 1
+}
+Write-Success "Checksum verified."
+
 Write-Info "Extracting archive..."
 Expand-Archive -LiteralPath $zipPath -DestinationPath $tmpDir -Force
 Write-Success "Extraction completed."

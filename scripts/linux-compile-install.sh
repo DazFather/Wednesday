@@ -1,5 +1,5 @@
 #!/bin/sh
-set -euo pipefail
+set -eu
 
 # Version detection (tag or commit)
 wed_version="$(git describe --always --tags 2>/dev/null || git rev-parse --short HEAD)"

@@ -1,5 +1,5 @@
 #!/bin/sh
-set -euo pipefail
+set -eu
 
 # Version detection (tag or commit)
 wed_version="$(git describe --always --tags 2>/dev/null || git rev-parse --short HEAD)"
@@ -22,7 +22,7 @@ go build -ldflags="-s -w -X main.Version=$wed_version" -o "$BIN_DIR/wed" ./cmd/w
 chmod 755 "$BIN_DIR/wed"
 
 # Man pages (Homebrew-compatible)
-if [ -d "manuals" ] && command -v man >/dev/null 2>&1; then
+if [ -d "man" ] && command -v man >/dev/null 2>&1; then
     MAN_DIR="/usr/local/share/man"
     
     for manpage in man/*.[0-9]; do

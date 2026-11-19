@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 # Darwin (macOS) installation script (user-local only)
-set -euo pipefail
+set -eu
 
 # Determine binary installation directory
 if [ -n "${GOBIN:-}" ]; then
@@ -33,14 +33,14 @@ if [ -d "manuals" ] && command -v man >/dev/null 2>&1; then
     # macOS-specific man path detection
     find_man_dir() {
         # 1. Check homebrew location
-        local brew_man_dir="/usr/local/share/man"
+        brew_man_dir="/usr/local/share/man"
         if [ -d "$brew_man_dir" ]; then
             echo "$brew_man_dir"
             return
         fi
 
         # 2. Check XDG location
-        local xdg_man_dir="${HOME}/.local/share/man"
+        xdg_man_dir="${HOME}/.local/share/man"
         if [ -d "$xdg_man_dir" ]; then
             echo "$xdg_man_dir"
             return
@@ -48,14 +48,19 @@ if [ -d "manuals" ] && command -v man >/dev/null 2>&1; then
 
         # 3. Check manpath output
         if command -v manpath >/dev/null 2>&1; then
-            local manpath_output
             manpath_output=$(manpath 2>/dev/null)
-            for path in ${manpath_output//:/ }; do
-                if [[ "$path" == "$HOME"/* || "$path" == "/usr/local"* ]]; then
-                    echo "$path"
-                    return
-                fi
+            old_ifs=$IFS
+            IFS=:
+            for path in $manpath_output; do
+                case "$path" in
+                    "$HOME"/* | /usr/local*)
+                        echo "$path"
+                        IFS=$old_ifs
+                        return
+                        ;;
+                esac
             done
+            IFS=$old_ifs
         fi
 
         # 4. Fallback to homebrew-style location
@@ -77,10 +82,12 @@ if [ -d "manuals" ] && command -v man >/dev/null 2>&1; then
         section=$(basename "$manpage" | cut -d. -f2)
 
         # Validate section is a digit
-        if [[ ! "$section" =~ ^[0-9]+$ ]]; then
-            echo " [ERROR: Invalid section number]" >&2
-            continue
-        fi
+        case "$section" in
+            '' | *[!0-9]*)
+                echo " [ERROR: Invalid section number]" >&2
+                continue
+                ;;
+        esac
 
         dest_dir="${MAN_DIR}/man${section}"
         mkdir -p "$dest_dir"
