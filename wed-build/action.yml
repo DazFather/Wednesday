@@ -19,11 +19,18 @@ runs:
       shell: bash
       run: |
         case "${{ runner.os }}" in
-          Linux | macOS)
+          Linux)
+            GOOS="linux"
+            EXT="tar.gz"
+            BINARY="wed"
+            ;;
+          macOS)
+            GOOS="darwin"
             EXT="tar.gz"
             BINARY="wed"
             ;;
           Windows)
+            GOOS="windows"
             EXT="zip"
             BINARY="wed.exe"
             ;;
@@ -46,7 +53,7 @@ runs:
             ;;
         esac
 
-        FILENAME="wed-${{ runner.os }}-${ARCH}.${EXT}"
+        FILENAME="wed-${GOOS}-${ARCH}.${EXT}"
 
         echo "ext=$EXT" >> "$GITHUB_OUTPUT"
         echo "filename=$FILENAME" >> "$GITHUB_OUTPUT"
